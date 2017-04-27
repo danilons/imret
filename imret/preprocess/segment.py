@@ -1,19 +1,20 @@
 # coding: utf-8
 import numpy as np
+import cv2
 import caffe
 from ..color.color_palette import ColorPalette
 
 
 class Segment(object):
 
-    def __init__(self, prototxt, weights, mean=None, gpu=True):
+    def __init__(self, prototxt, weights, names, mean=None, gpu=True):
         if gpu:
             print("Enabling GPU mode.")
             caffe.set_mode_gpu()
 
         print("Creating net with: \n{} \n{}".format(prototxt, weights))
         self.net = caffe.Net(prototxt, weights, caffe.TEST)
-        self.color_palette = ColorPalette()
+        self.color_palette = ColorPalette(name_conversion=names)
 
         self.transformer = caffe.io.Transformer({'data': self.net.blobs['data'].data.shape})
         self.transformer.set_transpose('data', (2, 0, 1))  # move image channels to outermost dimension
@@ -36,7 +37,9 @@ class Segment(object):
         return self.net.blobs['data'].data.shape[-2:]
 
     def segmentation(self, image):
-        img = caffe.io.resize_image(image, self.shape)
+        fx = image.shape[0] / float(self.shape[0])
+        fy = image.shape[1] / float(self.shape[1])
+        img = cv2.resize(image, self.shape, fx, fy)
         transformed_image = self.transformer.preprocess('data', img)
         self.net.blobs['data'].data[...] = transformed_image
         output = self.net.forward()
@@ -45,6 +48,6 @@ class Segment(object):
         paletted = np.zeros((w, h, 3), dtype=np.uint8)
         for pixel_value in np.unique(segmentation):
             x, y = np.where(segmentation == pixel_value)
-            color = self.color_palette.color_from_id(class_id=pixel_value)
-            paletted[x, y, :] = color
+            b, g, r = self.color_palette.color_from_id(class_id=pixel_value)
+            paletted[x, y, :] = np.array([r, g, b])
         return paletted

@@ -4,9 +4,9 @@ from .palette import PALETTE
 
 
 class ColorPalette:
-    def __init__(self):
+    def __init__(self, name_conversion):
         self.palette = PALETTE
-        self.class_names = pd.read_csv('data/name_conversion.csv').set_index('Class')['Name'].to_dict()
+        self.class_names = pd.read_csv(name_conversion).set_index('Class')['Name'].to_dict()
         self.names = ['__background__'] + sorted(set(self.class_names.values()))
 
     def __getitem__(self, name):

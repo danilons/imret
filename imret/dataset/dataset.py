@@ -2,7 +2,7 @@
 import os
 import h5py
 import cv2
-
+import numpy as np
 
 class Dataset(object):
 
@@ -23,11 +23,33 @@ class Dataset(object):
         return contour
 
     def get_im_array(self, image, rgb=False):
-        if rgb:
-            return cv2.imread(os.path.join(self.image_path, image))[:, :, (2, 1, 0)]
-        return cv2.imread(os.path.join(self.image_path, image))
+        img = cv2.imread(os.path.join(self.image_path, image))
+        if img is not None and rgb:
+            img = img[:, :, (2, 1, 0)]
+        return img
 
     def get_image_with_objects(self, image, obj_id=None, **kwargs):
         img = self.get_im_array(image, **kwargs)
         self.detector.get_image_with_objects(img, image, obj_id, **kwargs)
         return img
+
+    def get_objects(self, image, classnames):
+        imname = image.replace('.jpg', '.png')
+        objects = cv2.imread(os.path.join(self.image_path, imname), 0)
+        if objects is None:
+            return {}
+
+        classes = np.unique(objects)
+        segmentation = {}
+
+        for k in classes:
+            x, y = np.where(objects == k)
+            img = np.zeros(objects.shape[:2], dtype=np.uint8)
+            img[x, y] = 255.
+            _, binary = cv2.threshold(img, 127, 255, 0)
+            _, contours, _ = cv2.findContours(binary, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+            biggest = sorted([(len(cnt), nn) for nn, cnt in enumerate(contours)], key=lambda x: x[0], reverse=True)
+            _, idx = biggest[0]
+            segmentation[classnames[k]] = contours[idx]
+
+        return segmentation

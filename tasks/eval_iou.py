@@ -64,10 +64,10 @@ if __name__ == "__main__":
             bar.update(1)
 
     total = 0
-    for object_name, scores in iou.iteritems():
+    for object_name, scores in sorted(iou.items(), key=lambda x: x[0]):
         score = sum(scores) / len(scores)
         total += score
         print("{:20s} score: {:.4f}%".format(object_name, score * 100))
-    print("{:20s} score: {:.4f}%".format('Total mean', total * 100))
+    print("{:20s} score: {:.4f}%".format('Total mean', (total / len(iou)) * 100))
 
     print("And we are done.")

@@ -28,11 +28,6 @@ class Dataset(object):
             img = img[:, :, (2, 1, 0)]
         return img
 
-    def get_image_with_objects(self, image, obj_id=None, **kwargs):
-        img = self.get_im_array(image, **kwargs)
-        self.detector.get_image_with_objects(img, image, obj_id, **kwargs)
-        return img
-
     def get_objects(self, image, classnames):
         imname = image.replace('.jpg', '.png')
         objects = cv2.imread(os.path.join(self.image_path, imname), 0)

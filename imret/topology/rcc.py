@@ -104,7 +104,7 @@ class RCC(object):
             else:
                 Relation(scope='DC')
 
-        return Relation(scope='UNK')
+        return Relation(scope='DC')
 
     def _intersection(self, ix, iy):
         """

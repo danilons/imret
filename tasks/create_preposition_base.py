@@ -21,8 +21,8 @@ def save_relations(dataset, sq, output_folder, alpha=.4):
                     obj1, prep, obj2 = text.split('-')
                     imgs = [dataset.images[idx] for idx, ranked in enumerate(query['rank']) if ranked]
                     for nn, imname in enumerate(imgs):
-                        step = "{:3d}/{:3d} Query type: {:1s} name: {:20s}  step: {:3d}/{:3d}".format(n1, len(sq[query_type]),
-                                                                                   query_type, text, nn, len(imgs))
+                        step = "{:3d}/{:3d} Query type: {:1s} name: {:30s} step: {:3d}/{:3d}".format(n1, len(sq[query_type]),
+                                                                                   query_type, text[:30], nn, len(imgs))
                         stdout.write("\r%s" % step)
                         stdout.flush()
                         contours = dataset.ground_truth(imname)

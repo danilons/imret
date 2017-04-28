@@ -13,15 +13,16 @@ from imret.query import StructuredQuery
 def save_relations(dataset, sq, output_folder, alpha=.4):
     with click.progressbar(length=5, show_pos=True, show_percent=True) as bar:
         for query_type in sq.query_types:
-            for query in sq[query_type]:
+            stdout.write("\n")
+            for n1, query in enumerate(sq[query_type]):
                 name = query['name'].split('&')
                 for noun in name:
                     text = noun.split(',')[-1]
                     obj1, prep, obj2 = text.split('-')
                     imgs = [dataset.images[idx] for idx, ranked in enumerate(query['rank']) if ranked]
-                    stdout.write("\n")
                     for nn, imname in enumerate(imgs):
-                        step = "Query type: {} name: {}, step: {}/{}".format(query_type, text, nn, len(imgs))
+                        step = "{:3d}/{:3d} Query type: {:1s} name: {:20s}  step: {:3d}/{:3d}".format(n1, len(sq[query_type]),
+                                                                                   query_type, text, nn, len(imgs))
                         stdout.write("\r%s" % step)
                         stdout.flush()
                         contours = dataset.ground_truth(imname)

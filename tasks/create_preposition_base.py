@@ -12,7 +12,7 @@ from imret.query import Annotation
 
 
 def save_relations(dataset, qa, output_folder, alpha=.4):
-    with click.progressbar(length=5, show_pos=True, show_percent=True) as bar:
+    with click.progressbar(length=len(qa.db), show_pos=True, show_percent=True) as bar:
         for query, imgs in qa.db.iteritems():
             obj1, prep, obj2 = query.split('-')
             stdout.write("\n")
@@ -38,12 +38,17 @@ def save_relations(dataset, qa, output_folder, alpha=.4):
                     objected = cv2.bitwise_and(imarray, imarray, mask=mask)
                     cv2.addWeighted(m1, alpha, objected, 1 - alpha, 0, objected)
                     cv2.addWeighted(m2, alpha, objected, 1 - alpha, 0, objected)
-                    dirname = os.path.join(output_folder, prep + "-" + topology[0]['relation'])
+                    try:
+                        dirname = os.path.join(output_folder, prep + "-" + topology[0]['relation'])
+                    except TypeError:
+                        dirname = os.path.join(output_folder, prep + "-EQ")
+
                     imgfile = "{}-{}-{}.png".format(imname.replace('.jpg', ''), obj1, obj2)
                     if not os.path.exists(dirname):
+                        print("Creating folder: {}".format(dirname))
                         os.makedirs(dirname)
                     cv2.imwrite(os.path.join(dirname, imgfile), objected)
-        bar.update(1)
+            bar.update(1)
 
 
 if __name__ == "__main__":
@@ -58,5 +63,5 @@ if __name__ == "__main__":
     suffix = re.search('(train|test)', params.annot_folder).group()
     dataset = Dataset(params.dataset_path, suffix, params.image_path)
     qa = Annotation(params.annot_folder)
-    save_relations(dataset, qa, params.output)
+    save_relations(dataset, qa, os.path.join(params.output, suffix))
     print("Done.")

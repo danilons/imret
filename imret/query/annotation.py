@@ -31,9 +31,15 @@ class Annotation:
                 self.objects.append(noun2)
 
         self.objects = list(set(self.objects))
+        self.labels = {'books': 'book', 'cars': 'car', 'flowers': 'flower', 'seats': 'seat',
+                       'rocks': 'rock', 'cupboard': 'cabinet', 'gate': 'bar'}
 
     def __getitem__(self, imname):
         return self.imgs.get(imname, [])
+
+    @property
+    def normalized_names(self):
+        return [self.labels.get(name, name) for name in self.names]
 
     def features(self):
         for img, queries in self.imgs.iteritems():

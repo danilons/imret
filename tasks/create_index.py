@@ -24,12 +24,13 @@ def create_mask(image, pixel_value, color):
     m2[x, y, :] = color
     return m1, m2
 
+
 def chunks(lst, size):
     """Yield successive n-sized chunks from lst."""
     for i in xrange(0, len(lst), size):
         yield lst[i:i + size]
 
-def process_image(image, segmented, annot, labels, transformer, df):
+def process_image(image, segmented, annot, labels, transformer, df, batch_size=32):
     alpha = .4
     index = []
     images = []
@@ -54,19 +55,20 @@ def process_image(image, segmented, annot, labels, transformer, df):
             objects.append((obj1, obj2))
 
     # feed net
-    _, channels, w, h = net.blobs['data'].data.shape
-    net.blobs['data'].reshape(len(images), channels, w, h)
-    for chunk in chunks(images, 32):
-        for idx in xrange(len(chunk)):
-            transformed_image = transformer.preprocess('data', chunk[idx])
-            net.blobs['data'].data[idx] = transformed_image
+    for n1, chunk in enumerate(chunks(zip(images, objects), size=batch_size)):
+        _, channels, w, h = net.blobs['data'].data.shape
+        net.blobs['data'].reshape(len(chunk), channels, w, h)
+
+        for idx1, (im, _) in enumerate(chunk):
+            transformed_image = transformer.preprocess('data', im)
+            net.blobs['data'].data[idx1] = transformed_image
 
         output = net.forward()
         output_prob = output['softmax']
-        for idx, prob in enumerate(output_prob):
+        for idx2, prob in enumerate(output_prob):
             prep = labels[prob.argmax()]
             score = prob.max()
-            obj1, obj2 = objects[idx]
+            _, (obj1, obj2) = chunk[idx2]
             index.append([prep, obj1, obj2, score])
     return index
 
@@ -79,9 +81,10 @@ if __name__ == "__main__":
     parser.add_argument('-c', '--caffemodel', action="store", default='data/models/preposition/snapshot_iter_810.caffemodel')
     parser.add_argument('-m', '--mean_file', action="store", default='data/models/preposition/mean.binaryproto')
     parser.add_argument('-a', '--annot_folder', action="store", default='data/query/test_anno')
-    parser.add_argument('-o', '--output_file', action="store", default='data/preposition/index.csv')
+    parser.add_argument('-o', '--output_file', action="store", default='data/preposition/index2.csv')
     parser.add_argument('-p', '--dataset_path', action="store", default='data/datasets')
     parser.add_argument('-f', '--object_info', action="store", default='data/models/objectInfo150.txt')
+    parser.add_argument('-b', '--batch_size', action="store", default=32, type=int)
     parser.add_argument('--gpu', dest='gpu', action="store_true", default=False)
     parser.add_argument('--no-gpu', dest='gpu', action='store_false')
     parser.set_defaults(feature=True)
@@ -92,8 +95,8 @@ if __name__ == "__main__":
         caffe.set_mode_gpu()
     else:
         print("CPU mode")
+        caffe.set_mode_cpu()
 
-    caffe.set_mode_cpu()
     net = caffe.Net(opts.deploy_file, opts.caffemodel, caffe.TEST)
     annot = Annotation(opts.annot_folder)
     dset = Dataset(opts.dataset_path, 'test', opts.image_path)
@@ -131,8 +134,9 @@ if __name__ == "__main__":
                 bar.update(1)
                 continue
 
-            idx = process_image(image, segmented, annot, labels, transformer, df)
+            idx = process_image(image, segmented, annot, labels, transformer, df, opts.batch_size)
             for (prep, obj1, obj2, score) in idx:
+                index.setdefault('image', []).append(imname)
                 index.setdefault('preposition', []).append(prep)
                 index.setdefault('object1', []).append(obj1)
                 index.setdefault('object2', []).append(obj2)

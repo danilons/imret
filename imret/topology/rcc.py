@@ -35,6 +35,10 @@ class Relation(object):
     def get_name(cls, relation):
         return cls._longname[relation]
 
+    @classmethod
+    def get_preffix(cls):
+        return cls._longname.keys()
+
 
 class RCC(object):
     rx = 64

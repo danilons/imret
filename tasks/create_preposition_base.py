@@ -39,11 +39,11 @@ def save_relations(dataset, sq, output_folder, alpha=.4):
                             cv2.drawContours(m1, [contour1.astype(np.int32)], -1, (255, 0, 0), -1)
                             cv2.drawContours(m2, [contour2.astype(np.int32)], -1, (0, 0, 255), -1)
 
-                            topology = topology_relation(imarray.shape[:2], {obj1: contour1, obj2: contour2})
+                            # topology = topology_relation(imarray.shape[:2], {obj1: contour1, obj2: contour2})
                             objected = cv2.bitwise_and(imarray, imarray, mask=mask)
                             cv2.addWeighted(m1, alpha, objected, 1 - alpha, 0, objected)
                             cv2.addWeighted(m2, alpha, objected, 1 - alpha, 0, objected)
-                            dirname = os.path.join(output_folder, prep + "-" + topology[0]['relation'])
+                            dirname = os.path.join(output_folder, prep)
                             imgfile = "{}-{}-{}.png".format(imname.replace('.jpg', ''), obj1, obj2)
                             if not os.path.exists(dirname):
                                 os.makedirs(dirname)
@@ -58,10 +58,10 @@ if __name__ == "__main__":
     parser.add_argument('-n', '--names', action="store", default='data/name_conversion.csv')
     parser.add_argument('-s', '--sq_file', action="store", default='data/datasets/Struct-Query-Train.mat')
     parser.add_argument('-t', '--train', action="store", default='train')
-    parser.add_argument('-o', '--output', action="store", default='data/preposition')
+    parser.add_argument('-o', '--output', action="store", default='data')
     params = parser.parse_args()
 
     dataset = Dataset(params.dataset_path, params.train, params.image_path)
     sq = StructuredQuery(params.sq_file)
-    save_relations(dataset, sq, params.output)
+    save_relations(dataset, sq, os.path.join(params.output, params.train))
     print("Done.")

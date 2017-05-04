@@ -33,7 +33,6 @@ def save_relations(dataset, qa, output_folder, alpha=.4):
                     cv2.drawContours(mask, [contour2.astype(np.int32)], -1, 255, -1)
                     cv2.drawContours(m1, [contour1.astype(np.int32)], -1, (255, 0, 0), -1)
                     cv2.drawContours(m2, [contour2.astype(np.int32)], -1, (0, 0, 255), -1)
-
                     topology = topology_relation(imarray.shape[:2], {obj1: contour1, obj2: contour2})
                     objected = cv2.bitwise_and(imarray, imarray, mask=mask)
                     cv2.addWeighted(m1, alpha, objected, 1 - alpha, 0, objected)

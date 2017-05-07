@@ -18,18 +18,19 @@ class Segment(object):
 
         self.transformer = caffe.io.Transformer({'data': self.net.blobs['data'].data.shape})
         self.transformer.set_transpose('data', (2, 0, 1))  # move image channels to outermost dimension
-        self.transformer.set_channel_swap('data', (2, 1, 0))  # swap channels from RGB to BGR
+        # self.transformer.set_channel_swap('data', (2, 1, 0))  # swap channels from RGB to BGR
 
         if mean:
-            print("Loading image from file: {}".format(mean))
-            data = open(mean, 'rb').read()
-            blob = caffe.proto.caffe_pb2.BlobProto()
-            blob.ParseFromString(data)
-            mu = np.array(caffe.io.blobproto_to_array(blob))[0]
-            mu = mu.mean(1).mean(1)
-            self.transformer.set_mean('data', mu)  # subtract the dataset-mean value in each channel
-
-        self.transformer.set_raw_scale('data', 255)
+            pass
+        #     print("Loading image from file: {}".format(mean))
+        #     data = open(mean, 'rb').read()
+        #     blob = caffe.proto.caffe_pb2.BlobProto()
+        #     blob.ParseFromString(data)
+        #     mu = np.array(caffe.io.blobproto_to_array(blob))[0]
+        #     mu = mu.mean(1).mean(1)
+        #     self.transformer.set_mean('data', mu)  # subtract the dataset-mean value in each channel
+        #
+        # self.transformer.set_raw_scale('data', 255)
 
 
     @property
@@ -48,6 +49,7 @@ class Segment(object):
         paletted = np.zeros((w, h, 3), dtype=np.uint8)
         for pixel_value in np.unique(segmentation):
             x, y = np.where(segmentation == pixel_value)
-            b, g, r = self.color_palette.color_from_id(class_id=pixel_value)
+            # b, g, r = self.color_palette.color_from_id(class_id=pixel_value)
+            r, g, b = self.color_palette.color_from_id(class_id=pixel_value)
             paletted[x, y, :] = np.array([r, g, b])
         return paletted

@@ -15,9 +15,9 @@ def topology_relation(shape, objects):
     if len(objects) == 1:
         return [(contours, contours, 'EQ')]
 
-    def draw(shape, contour):
+    def draw(shape, contour, value):
         img = np.zeros(shape, dtype=np.uint8)
-        cv2.drawContours(img, [contour], -1, 1, -1)
+        cv2.drawContours(img, [contour], -1, value, -1)
         return img
 
     relations = []
@@ -34,7 +34,10 @@ def topology_relation(shape, objects):
         y11, y12 = sorted([y11, y12])
         contour1 = np.array([[x11, y11], [x11, y12], [x12, y12], [x12, y11]])
 
-        imx = images.get(obj1, draw(shape, contour1))
+        imx = images.get(obj1, None)
+        if imx is None:
+            imx = draw(shape, contour1, value=detector.x_value)
+            images[obj1] = imx
 
         x2, y2, w2, h2 = cv2.boundingRect(c2)
         x21, y21, x22, y22 = x2, y2, x2 + w2, y2 + h2
@@ -42,9 +45,12 @@ def topology_relation(shape, objects):
         y21, y22 = sorted([y21, y22])
         contour2 = np.array([[x21, y21], [x21, y22], [x22, y22], [x22, y21]])
 
-        imy = images.get(obj2, draw(shape, contour2))
+        imy = images.get(obj2, None)
+        if imy is None:
+            imy = draw(shape, contour2, value=detector.y_value)
+            images[obj2] = imy
 
-        relation = detector.detect(imx, imy + 1)
+        relation = detector.detect(imx, imy)
         relations.append({'objects': (obj1, obj2),
                           'contours': (contour1, contour2),
                           'relation': relation.scope})

@@ -3,4 +3,6 @@ notebooks/*
 *egg-info
 *.pyc
 data/*
+datasets/*
 .idea
+*.txt

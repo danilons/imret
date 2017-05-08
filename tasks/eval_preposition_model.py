@@ -1,11 +1,4 @@
 #!/usr/bin/env python2
-# Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
-
-"""
-Classify an image using individual model files
-Use this script as an example to build your own tool
-"""
-
 import argparse
 import os
 import glob

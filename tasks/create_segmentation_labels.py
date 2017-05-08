@@ -4,10 +4,12 @@ import argparse
 import skimage.io
 import click
 import cv2
+import scipy.misc
 import numpy as np
 from imret.dataset import dataset
 from imret.color import ColorPalette
 
+size = (384, 384)
 
 def create_label(scale, ground_truth, rgb=True):
     if rgb:
@@ -30,9 +32,10 @@ if __name__ == "__main__":
     parser.add_argument('-d', '--dataset_path', action="store", default='data/')
     parser.add_argument('-s', '--suffix', action="store", default='train')
     parser.add_argument('-i', '--image_path', action="store", default='data/images')
+    parser.add_argument('-r', '--resized_path', action="store", default='data/resized')
     parser.add_argument('-l', '--label_path', action="store", default='data/labels')
     parser.add_argument('-m', '--mark_path', action="store", default='data/mark')
-    parser.add_argument('-n', '--names', action="store", default='data/name_conversion.csv')
+    parser.add_argument('-n', '--names', action="store", default='data/model/name_conversion.csv')
     parser.set_defaults(feature=True)
     params = parser.parse_args()
 
@@ -46,13 +49,18 @@ if __name__ == "__main__":
                 bar.update(1)
                 continue
 
-            w, h = (384, 384)
+            w, h = size
             w1, h1 = image.shape[:2]
             fy = w / float(w1)
             fx = h / float(h1)
             scale = np.array([fx, fy])
 
             ground_truth = dset.ground_truth(imname)
+
+            img_name = os.path.join(params.resized_path, imname.replace('.jpg', '.png'))
+            if not os.path.exists(img_name):
+                rsz = scipy.misc.imresize(image, size)
+                skimage.io.imsave(img_name, rsz)
 
             label_name = os.path.join(params.label_path, imname.replace('.jpg', '.png'))
             if not os.path.exists(label_name):

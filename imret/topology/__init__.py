@@ -1,2 +1,3 @@
-from rcc import *
-from relations import *
+from .rcc import *
+from .relations import *
+from .utils import *

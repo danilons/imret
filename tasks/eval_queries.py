@@ -1,15 +1,15 @@
 #!/usr/bin/env python
 from __future__ import division
-import json
+import os
 import argparse
 import click
 import numpy as np
 import pandas as pd
 import cytoolz
+import json
 from sklearn.metrics import average_precision_score, roc_curve
 from imret.query import Annotation
 from imret.dataset import Dataset
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='IRRCC program')
@@ -80,4 +80,3 @@ if __name__ == "__main__":
         json.dump(mean_average_precision, fp)
 
     print("mAP {:.4f}".format(np.mean(avg_precision)))
-

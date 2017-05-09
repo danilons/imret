@@ -85,23 +85,22 @@ def process(deploy_file, weights, mean_file, labels_file, impath, batch_size=32)
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='IRRCC program')
-    # Positional arguments
-    parser.add_argument('-w', '--caffemodel', help='Path to a .caffemodel', type=str)
-    parser.add_argument('-d', '--deploy_file', help='Path to the deploy file', type=str)
-    parser.add_argument('-i', '--image_path', help='Path to images', type=str)
 
-    # Optional arguments
-    parser.add_argument('-m', '--mean', help='Path to a mean file (*.npy)')
-    parser.add_argument('-l', '--labels', help='Path to a labels file')
-    parser.add_argument('-b', '--batch-size', type=int)
-    parser.add_argument('--nogpu', action='store_true', help="Don't use the GPU")
-
+    parser.add_argument('-w', '--caffemodel', help='Path to a .caffemodel', type=str, default='data/model/preposition/snapshot.caffemodel')
+    parser.add_argument('-d', '--deploy_file', help='Path to the deploy file', type=str, default='data/model/preposition/deploy.prototxt')
+    parser.add_argument('-i', '--image_path', help='Path to images', type=str, default='data/test')
+    parser.add_argument('-m', '--mean', help='Path to a mean file (*.npy)', default='data/model/preposition/mean.binaryproto')
+    parser.add_argument('-l', '--labels', help='Path to a labels file', default='data/model/preposition/labels.txt')
+    parser.add_argument('-b', '--batch-size', type=int, default=32)
+    parser.add_argument('--gpu', dest='gpu', action="store_true", default=True)
+    parser.add_argument('--no-gpu', dest='gpu', action='store_false')
+    parser.set_defaults(feature=True)
     opts = parser.parse_args()
 
-    if opts.nogpu:
-        caffe.set_mode_cpu()
-    else:
+    if opts.gpu:
         caffe.set_mode_gpu()
+    else:
+        caffe.set_mode_cpu()
 
     process(deploy_file=opts.deploy_file,
             weights=opts.caffemodel,

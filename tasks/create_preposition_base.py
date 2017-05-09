@@ -4,8 +4,8 @@ import os
 import cv2
 import numpy as np
 import click
-import re
 import argparse
+import re
 from imret.dataset import Dataset
 from imret.topology import topology_relation
 from imret.query import Annotation
@@ -42,11 +42,15 @@ def save_relations(dataset, qa, output_folder, alpha=.4):
                     except TypeError:
                         dirname = os.path.join(output_folder, prep + "-EQ")
 
+                    objected = cv2.bitwise_and(imarray, imarray, mask=mask)
+                    cv2.addWeighted(m1, alpha, objected, 1 - alpha, 0, objected)
+                    cv2.addWeighted(m2, alpha, objected, 1 - alpha, 0, objected)
+                    dirname = os.path.join(output_folder, prep)
                     imgfile = "{}-{}-{}.png".format(imname.replace('.jpg', ''), obj1, obj2)
                     if not os.path.exists(dirname):
-                        print("Creating folder: {}".format(dirname))
                         os.makedirs(dirname)
                     cv2.imwrite(os.path.join(dirname, imgfile), objected)
+
             bar.update(1)
 
 

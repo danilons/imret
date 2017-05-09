@@ -7,7 +7,10 @@ import numpy as np
 class Dataset(object):
 
     def __init__(self, path, suffix='train', image_path='images'):
-        self.coordinates = h5py.File(os.path.join(path, 'dataset_{}.hdf5'.format(suffix)), 'r')
+        file_name = os.path.join(path, 'dataset_{}.hdf5'.format(suffix))
+        if not os.path.exists(file_name):
+            raise ValueError("Dataset {} not found.".format(file_name))
+        self.coordinates = h5py.File(file_name, 'r')
         self.image_path = image_path
 
     @property

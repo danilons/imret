@@ -6,7 +6,6 @@ from scipy.io import loadmat
 class StructuredQuery:
     def __init__(self, fname, query_limit=30):
         self.db = loadmat(fname, struct_as_record=True, chars_as_strings=True, squeeze_me=True)
-        # valid_queries = [q for q in self.query if len(np.nonzero(q['rank'])[0].tolist()) > 30]
         valid_queries = [q for q in self.query if q['rank'].sum() > query_limit]
 
         self.queries = dict()

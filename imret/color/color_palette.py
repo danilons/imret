@@ -30,3 +30,9 @@ class ColorPalette:
             if name == v:
                 names.append(k)
         return names
+
+    def save(self, file_name):
+        with open(file_name, 'w') as fp:
+            for name in self.names:
+                class_id = self.class_id(name)
+                fp.write("#{}: \t {}\n".format(class_id, name))

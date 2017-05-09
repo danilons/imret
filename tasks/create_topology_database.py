@@ -8,14 +8,20 @@ import traceback
 import h5py
 import numpy
 import signal
+import re
 from multiprocessing import Pool
 from imret.dataset import Dataset
 from imret.topology import topology_relation
 from imret.color import ColorPalette
 
 
-def _topology_relation(objects, image):
-    return image, topology_relation((384, 384), objects)
+def _topology_relation(objects, image, shape):
+    # return image, topology_relation(shape, objects)
+    print("Im running.")
+    relation = topology_relation(shape, objects)
+    if not relation:
+        print("No topology for image: {}".format(image))
+    return image, relation
 
 
 def init_worker():
@@ -32,14 +38,20 @@ def store_topology(dset, mode, output_file, classnames):
     processes = []
     for imname in dset.images:
         objects = dset.ground_truth(imname) if mode == 'train' else dset.get_objects(imname, classnames)
-        processes.append(pool.apply_async(func=_topology_relation, args=(objects, imname)))
+        imarray = dset.get_im_array(imname)
+        if imarray is None:
+            continue
+        # processes.append(pool.apply_async(func=_topology_relation, args=(objects, imname, imarray.shape[:2],)))
+        processes.append((_topology_relation, objects, imname, imarray.shape[:2]))
 
     content = {}
     with click.progressbar(length=len(processes), show_pos=True, show_percent=True) as bar:
         try:
             for process in processes:
                 try:
-                    image, relation = process.get()
+                    f, obj, imnam, shape = process
+                    image, relation = f(obj, imnam, shape)
+                    # image, relation = process.get()
                     content[image] = relation
                 except KeyboardInterrupt:
                     raise
@@ -87,16 +99,16 @@ def store_topology(dset, mode, output_file, classnames):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='IRRCC program')
-    parser.add_argument('-d', '--dataset_path', action="store", default='data/')
+    parser.add_argument('-d', '--dataset_path', action="store", default='data/datasets')
     parser.add_argument('-i', '--image_path', action="store", default='data/images')
-    parser.add_argument('-n', '--names', action="store", default='data/name_conversion.csv')
+    parser.add_argument('-n', '--names', action="store", default='data/model/segmentation/name_conversion.csv')
     params = parser.parse_args()
 
     color_palette = ColorPalette(name_conversion=params.names)
-    files = glob.glob(os.path.join(params.dataset_path, 'dataset_*.hdf5'))
+    files = glob.glob(os.path.join(params.dataset_path, 'dataset_test*.hdf5'))
     for fname in files:
-        mode = 'train' if 'train' in fname else 'test'
-        print("Start processing file: {}".format(fname))
+        suffix = re.search('(train|test)', fname.lower()).group()
+        print("Start processing file: {}, mode: {}".format(fname, suffix))
 
         basename = os.path.basename(fname)
         filename, _ = os.path.splitext(basename)

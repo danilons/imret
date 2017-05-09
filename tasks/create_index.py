@@ -10,9 +10,10 @@ import argparse
 from click import progressbar
 from imret.query import Annotation
 from imret.dataset import Dataset
+from imret.color import ColorPalette
+from imret.topology import topology_relation
 
 net = None
-
 
 def create_mask(image, pixel_value, color):
     w, h = image.shape
@@ -98,6 +99,7 @@ if __name__ == "__main__":
         caffe.set_mode_cpu()
 
     net = caffe.Net(opts.deploy_file, opts.caffemodel, caffe.TEST)
+
     annot = Annotation(opts.annot_folder)
     dset = Dataset(opts.dataset_path, 'test', opts.image_path)
 

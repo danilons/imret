@@ -15,8 +15,8 @@ class RCCDataLayer(caffe.Layer):
        one-at-a-time while reshaping the net to preserve dimensions.
        Use this to feed data to a fully convolutional network.
        """
-    _rcc = Relation.get_preffix()
-    _labels = ['above', 'below']
+    _rcc = sorted([relation for relation in Relation.get_preffix() if relation.lower() != 'unk'])
+    _labels = ['above', 'across_from', 'behind', 'below', 'in', 'in_front_of', 'inside_of', 'left_of', 'on', 'right_of', 'under']
 
     def setup(self, bottom, top):
         """
@@ -30,7 +30,7 @@ class RCCDataLayer(caffe.Layer):
         """
         # config
         params = eval(self.param_str)
-        self.rcc_dir = '/home/danilo/workspace/phd/imret/data/preposition'  # add the path to the dataset
+        self.rcc_dir = '/Users/danilonunes/workspace/imret2/data/preposition'  # add the path to the dataset
         self.split = params['split']
         self.mean = np.array(params['mean'])
         self.random = params.get('randomize', True)
@@ -44,8 +44,9 @@ class RCCDataLayer(caffe.Layer):
             raise Exception("Do not define a bottom.")
 
         # load indices for images and labels
-        root_path = glob.glob(os.path.join(self.rcc_dir, '*'))
+        root_path = glob.glob(os.path.join(self.rcc_dir, self.split, '*'))
         indices = [img for dirname in root_path for img in glob.glob(os.path.join(dirname, '*.png'))]
+        random.shuffle(indices)
 
         if self.split == 'train':
             split = int(len(indices) * .8)
@@ -57,26 +58,26 @@ class RCCDataLayer(caffe.Layer):
         self.idx = 0
 
         # make eval deterministic
-        if 'train' not in self.split:
+        # if 'train' not in self.split:
+        if self.split != 'train':
             self.random = False
 
         # randomization: seed and pick
         if self.random:
             random.seed(self.seed)
             self.idx = random.randint(0, len(self.indices) - 1)
-        print("setuped")
 
     def reshape(self, bottom, top):
         img, rcc, label = self.load_image(self.indices[self.idx])
         self.data = img
-        self.rcc = np.zeros((1, 8), dtype=np.float32)
-        self.rcc[0, self._rcc.index(rcc)] = 1.
+        self.rcc = np.zeros(len(self._rcc), dtype=np.float32)
+        self.rcc[self._rcc.index(rcc)] = 1.
 
         self.label = np.array([self._labels.index(label)])
 
         # reshape tops to fit (leading 1 is for batch dimension)
         top[0].reshape(1, *self.data.shape)
-        top[1].reshape(1, 8)
+        top[1].reshape(1, *self.rcc.shape)
         top[2].reshape(1)
 
     def forward(self, bottom, top):
@@ -84,6 +85,7 @@ class RCCDataLayer(caffe.Layer):
         top[0].data[...] = self.data
         top[1].data[...] = self.rcc
         top[2].data[...] = self.label
+        # print("label: {}".format(self.label))
 
         # pick next input
         if self.random:
@@ -111,7 +113,7 @@ class RCCDataLayer(caffe.Layer):
             in_ = np.repeat(in_[:, :, None], 3, axis=2)
 
         in_ = in_[:, :, ::-1]
-        in_ -= self.mean
+        # in_ -= self.mean
         in_ = in_.transpose((2, 0, 1))
 
         label, rcc = os.path.basename(os.path.split(idx)[0]).split('-')

@@ -8,7 +8,7 @@ from imret.preprocess import segment
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='IRRCC program')
-    parser.add_argument('-d', '--dataset_path', action="store", default='data/')
+    parser.add_argument('-d', '--dataset_path', action="store", default='data/datasets')
     parser.add_argument('-s', '--suffix', action="store", default='train')
     parser.add_argument('-i', '--image_path', action="store", default='data/images')
     parser.add_argument('-o', '--output_path', action="store", default='data/segmented')

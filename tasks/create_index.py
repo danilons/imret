@@ -11,8 +11,7 @@ from click import progressbar
 from imret.query import StructuredQuery
 from imret.dataset import Dataset
 from imret.color import ColorPalette
-
-net = None
+from imret.topology import topology_relation
 
 
 def create_mask(image, pixel_value, color):
@@ -23,7 +22,7 @@ def create_mask(image, pixel_value, color):
     x, y = np.where(image == pixel_value)
     m1[x, y] = 1
     m2[x, y, :] = color
-    return m1, m2
+    return m1, m2, np.array([x, y]).T[:, np.newaxis, :]
 
 
 def chunks(lst, size):
@@ -36,6 +35,7 @@ def process_image(image, segmented, sq, labels, transformer, cp, batch_size=32):
     index = []
     images = []
     objects = []
+    relations = []
     image_ = scipy.misc.imresize(image, segmented.shape, interp='bilinear')
 
     for (x1, x2) in itertools.permutations(np.unique(segmented), 2):
@@ -46,8 +46,8 @@ def process_image(image, segmented, sq, labels, transformer, cp, batch_size=32):
             continue
 
         if obj1 in sq.names and obj2 in sq.names:
-            mask1, overlay1 = create_mask(segmented, x1, color=(255, 0, 0))
-            mask2, overlay2 = create_mask(segmented, x2, color=(0, 0, 255))
+            mask1, overlay1, contour1 = create_mask(segmented, x1, color=(255, 0, 0))
+            mask2, overlay2, contour2 = create_mask(segmented, x2, color=(0, 0, 255))
 
             img1 = cv2.bitwise_and(image_, image_, mask=mask1)
             img2 = cv2.bitwise_and(image_, image_, mask=mask2)
@@ -55,6 +55,8 @@ def process_image(image, segmented, sq, labels, transformer, cp, batch_size=32):
             cv2.addWeighted(overlay1, alpha, img, 1 - alpha, 0, img)
             cv2.addWeighted(overlay2, alpha, img, 1 - alpha, 0, img)
             img = scipy.misc.imresize(img[:, :, (2, 1, 0)], (256, 256), interp='bilinear')
+            relation = topology_relation(image.shape, {obj1: contour1, obj2: contour2})[0]['relation']
+            relations.append(relation)
             images.append(img)
             objects.append((obj1, obj2))
 
@@ -73,7 +75,7 @@ def process_image(image, segmented, sq, labels, transformer, cp, batch_size=32):
             prep = labels[prob.argmax()]
             score = prob.max()
             _, (obj1, obj2) = chunk[idx2]
-            index.append([prep, obj1, obj2, score])
+            index.append([prep, obj1, obj2, score, relations[idx2]])
     return index
 
 if __name__ == "__main__":
@@ -138,9 +140,10 @@ if __name__ == "__main__":
                 continue
 
             idx = process_image(image, segmented, sq, labels, transformer, cp, opts.batch_size)
-            for (prep, obj1, obj2, score) in idx:
+            for (prep, obj1, obj2, score, relation) in idx:
                 index.setdefault('image', []).append(imname)
                 index.setdefault('preposition', []).append(prep)
+                index.setdefault('rcc', []).append(relation)
                 index.setdefault('object1', []).append(obj1)
                 index.setdefault('object2', []).append(obj2)
                 index.setdefault('score', []).append(score)

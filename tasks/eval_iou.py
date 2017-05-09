@@ -12,10 +12,10 @@ from imret.color import ColorPalette
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='IRRCC program')
-    parser.add_argument('-d', '--dataset_path', action="store", default='data/')
+    parser.add_argument('-d', '--dataset_path', action="store", default='data/datasets')
     parser.add_argument('-i', '--image_path', action="store", default='data/images')
     parser.add_argument('-s', '--segmented_path', action="store", default='data/segmented')
-    parser.add_argument('-n', '--names', action="store", default='data/name_conversion.csv')
+    parser.add_argument('-n', '--names', action="store", default='data/model/segmentation/name_conversion.csv')
     params = parser.parse_args()
 
     iou = {}
@@ -43,6 +43,7 @@ if __name__ == "__main__":
             ground_truth = dset.ground_truth(imname)
             for object_name, contour in ground_truth.iteritems():
                 name = re.match('\D+', object_name).group()
+                name = color_palette.class_names.get(name, name)
                 try:
                     class_id = color_palette.class_id(name)
                     color = color_palette[name]
@@ -67,7 +68,7 @@ if __name__ == "__main__":
     for object_name, scores in sorted(iou.items(), key=lambda x: x[0]):
         score = sum(scores) / len(scores)
         total += score
-        print("{:20s} score: {:.4f}%".format(object_name, score * 100))
-    print("{:20s} score: {:.4f}%".format('Total mean', (total / len(iou)) * 100))
+        print("{:20s} {:.2f}%".format(object_name, score * 100))
+    print("{:20s} {:.2f}%".format('Total mean', (total / len(iou)) * 100))
 
     print("And we are done.")

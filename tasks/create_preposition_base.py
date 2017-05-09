@@ -5,8 +5,8 @@ import cv2
 import numpy as np
 import click
 import argparse
+import re
 from imret.dataset import Dataset
-from imret.topology import topology_relation
 from imret.query import StructuredQuery
 
 
@@ -39,7 +39,6 @@ def save_relations(dataset, sq, output_folder, alpha=.4):
                             cv2.drawContours(m1, [contour1.astype(np.int32)], -1, (255, 0, 0), -1)
                             cv2.drawContours(m2, [contour2.astype(np.int32)], -1, (0, 0, 255), -1)
 
-                            # topology = topology_relation(imarray.shape[:2], {obj1: contour1, obj2: contour2})
                             objected = cv2.bitwise_and(imarray, imarray, mask=mask)
                             cv2.addWeighted(m1, alpha, objected, 1 - alpha, 0, objected)
                             cv2.addWeighted(m2, alpha, objected, 1 - alpha, 0, objected)
@@ -57,10 +56,11 @@ if __name__ == "__main__":
     parser.add_argument('-i', '--image_path', action="store", default='data/images')
     parser.add_argument('-n', '--names', action="store", default='data/name_conversion.csv')
     parser.add_argument('-s', '--sq_file', action="store", default='data/datasets/Struct-Query-Train.mat')
-    parser.add_argument('-t', '--train', action="store", default='train')
     parser.add_argument('-o', '--output', action="store", default='data')
     params = parser.parse_args()
 
+    suffix = re.search('(train|test)', params.sq_file.lower()).group()
+    print("running set: {}".format(suffix))
     dataset = Dataset(params.dataset_path, params.train, params.image_path)
     sq = StructuredQuery(params.sq_file)
     save_relations(dataset, sq, os.path.join(params.output, params.train))

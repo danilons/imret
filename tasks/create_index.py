@@ -84,7 +84,7 @@ if __name__ == "__main__":
     parser.add_argument('-a', '--annot_folder', action="store", default='data/query/test_anno')
     parser.add_argument('-o', '--output_file', action="store", default='data/preposition/index2.csv')
     parser.add_argument('-p', '--dataset_path', action="store", default='data/datasets')
-    parser.add_argument('-f', '--object_info', action="store", default='data/models/objectInfo150.txt')
+    parser.add_argument('-f', '--object_info', action="store", default='data/models/preposition/objectInfo150.txt')
     parser.add_argument('-b', '--batch_size', action="store", default=32, type=int)
     parser.add_argument('--gpu', dest='gpu', action="store_true", default=False)
     parser.add_argument('--no-gpu', dest='gpu', action='store_false')

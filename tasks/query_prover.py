@@ -36,13 +36,16 @@ if __name__ == "__main__":
     parser.add_argument('-d', '--dataset_path', action="store", default='data/preposition/index.csv')
     parser.add_argument('-q', '--queries_path', action="store", default='data/query/query_equivalence.csv')
     parser.add_argument('-t', '--test_anno', action="store", default='data/query/test_anno/')
-    parser.add_argument('--ltb_runner', action="store", default='data/segmentation/ltb_runner')
-    parser.add_argument('--eprover', action="store", default='data/segmentation/eprover')
-    parser.add_argument('--batch_config', action="store", default='EBatchConfig.txt')
+    parser.add_argument('--ltb_runner', action="store", default='data/prover/E/PROVER/e_ltb_runner')
+    parser.add_argument('--eprover', action="store", default='data/prover/E/PROVER/eprover')
+    parser.add_argument('--sumo', action="store", default='/home/danilo/sigma_run/KBs/SUMO.tptp')
     params = parser.parse_args()
 
     df = pd.read_csv(params.dataset_path)
-    kb = KnowledgeBase(df, ltb_runner=params.ltb_runner, eprover=params.eprover, batch_config=params.batch_config)
+    kb = KnowledgeBase(df,
+                       ltb_runner=params.ltb_runner,
+                       eprover=params.eprover,
+                       sumo=params.sumo)
 
     queries = pd.read_csv(params.queries_path)
     queries = dict(zip(queries['Original'], queries['Equivalent']))

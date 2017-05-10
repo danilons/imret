@@ -14,6 +14,20 @@ class KnowledgeBase:
         self.df = df
         self.images = list(set(df.image))
         self.regex = re.compile(b'\[\[(\w+)')
+        self.batch = """
+        % SZS start BatchConfiguration
+        division.category LTB.SMO
+        output.required Assurance
+        output.desired Proof Answer
+        limit.time.problem.wc 60
+        % SZS end BatchConfiguration
+        % SZS start BatchIncludes
+        include('{sumo}').
+        include('{tptp}').
+        % SZS end BatchIncludes
+        % SZS start BatchProblems
+        include('{problem}').
+        % SZS end BatchProblems"""
 
     def ontology_by_image(self, image):
         imgname = image
@@ -35,17 +49,24 @@ class KnowledgeBase:
             yield axiom_.replace("_", "")
 
     def tptp_by_image(self, image, position=0):
-        for axiom in self.ontology_by_image(image):
-            if axiom.startswith("(instance"):
-                _, instance, classname = axiom.replace(")", "").split()
-                yield "fof(kb_IRRC_{},axiom,(( s__instance(s__{}__m,s__{}) ))).".format(position,
-                                                                                        instance,
-                                                                                        classname)
-            if axiom.startswith("(orientation"):
-                print(axiom)
-                _, obj1, obj2, relation = axiom.replace(")", "").split()
-                yield "fof(kb_IRRC_{},axiom,(( s__orientation(s__{}__m,s__{}__m,s__{}) ))).".format(position, obj1, obj2, relation)
-            position = position + 1
+        imgname = image
+        imindex = self.images.index(image)
+        frame = self.df[self.df['image'] == imgname]
+        for _ in xrange(1):
+            yield "(instance {} Image)".format(imgname).replace(".jpg", "")
+
+        objects = set(frame.object1) | set(frame.object2)
+        for obj in objects:
+            objname = "{}{}".format(obj, imindex)
+            yield "fof(kb_IRRC_{},axiom,(( s__instance(s__{}__m,s__{}) ))).".format(position,
+                                                                                    objname,
+                                                                                    obj.title())
+
+        for _, row in frame.iterrows():
+            obj1 = "{}{}".format(row.object1, imindex)
+            obj2 = "{}{}".format(row.object2, imindex)
+            prep = row['preposition'].title().replace(" ", "")
+            yield "fof(kb_IRRC_{},axiom,(( (s__holdsDuring(s__Now,'s__orientation(s__{}__m,s__{}__m,s__{})')) ))).".format(position, obj1, obj2, prep)
 
     def tptp_query(self, image, noun1, noun2, preposition):
         prep = preposition.title().replace("_", "")
@@ -73,35 +94,25 @@ class KnowledgeBase:
         irrc_fp = tempfile.NamedTemporaryFile(delete=False)
         for axiom in self.tptp_by_image(image):
             irrc_fp.write(axiom + "\n")
-        print("IRRC wrote to {}".format(irrc_fp.name))
+        irrc_fp.close()
 
         problems_fp = tempfile.NamedTemporaryFile(delete=False)
         problems_fp.write(tptp_query)
-        print("Problems wrote to {}".format(problems_fp.name))
-
-        answers_fp = tempfile.NamedTemporaryFile(delete=False)
-        answers_fp.write("")
-        print("Answers wrote to {}".format(answers_fp.name))
+        problems_fp.close()
 
         batch_config_fp = tempfile.NamedTemporaryFile(delete=False)
-        batch_config_fp.write("""
-                            % SZS start BatchConfiguration
-                            division.category LTB.SMO
-                            output.required Assurance
-                            output.desired Proof Answer
-                            limit.time.problem.wc 60
-                            % SZS end BatchConfiguration
-                            % SZS start BatchIncludes
-                            include('{sumo}').
-                            % SZS end BatchIncludes
-                            % SZS start BatchProblems
-                            include('{problem}').
-                            % SZS end BatchProblems
-                            """.format(sumo=self.sumo, problem=problems_fp.name).strip())
+        batch = self.batch.format(sumo=self.sumo,
+                                  tptp=irrc_fp.name,
+                                  problem=problems_fp.name)
+        batch_config_fp.write(batch)
+        batch_config_fp.close()
 
         cmd = "./{} {} {}".format(self.ltb_runner, batch_config_fp.name, self.eprover)
         print('Running {cmd}'.format(cmd=cmd))
-        response = subprocess.check_output(cmd, shell=True)
+
+        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=None, shell=True)
+        response, _ = process.communicate()
+        print(response)
 
         m = self.regex.findall("\n".join(response))
         if m:

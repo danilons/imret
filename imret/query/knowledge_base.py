@@ -12,7 +12,7 @@ class KnowledgeBase:
         self.eprover = eprover
         self.batch_config = batch_config
         self.df = df
-        self.images = list(set(df.images))
+        self.images = list(set(df.image))
         self.regex = re.compile(b'\[\[(\w+)')
 
     def ontology_by_image(self, image):
@@ -67,9 +67,12 @@ class KnowledgeBase:
         except AttributeError:
             return image, None, []
 
-        objects = set(self.df[self.df.images == image].object1) & set(self.df[self.df.images == image].object2)
+        objects = set(self.df[self.df.image == image].object1) & set(self.df[self.df.image == image].object2)
         if noun1 not in objects or noun2 not in objects:
             return image, None, []
+        
+        import ipdb;
+        ipdb.set_trace()
 
         tptp_query = self.tptp_query(image, noun1, noun2, preposition)
         with open('IRRC.tptp', 'w') as fp:
@@ -99,7 +102,7 @@ class KnowledgeBase:
         return image, None, response
 
     def runquery(self, query):
-        import ipdb; ipdb.set_trace()
         for image in self.images:
             image, imname, _ = self.prover(image=image, query=query)
-            return [(image, imname)]
+            yield image, imname
+            # return [(image, imname)]

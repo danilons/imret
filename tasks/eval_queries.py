@@ -25,15 +25,15 @@ if __name__ == "__main__":
     qa = Annotation(params.annotation)
     df = pd.read_csv(params.index_file)
 
-    print("Intersection size is {}".format(len(set(df.images) & set(qa.imgs))))
+    print("Intersection size is {}".format(len(set(df.image) & set(qa.imgs))))
     print("QA imgs", len(set(qa.imgs)))
-    print("DB imgs", len(set(df.images)))
+    print("DB imgs", len(set(df.image)))
 
     # assert len(set(df.images) & set(qa.imgs)) == len(qa.imgs), "Number of images different with query annotation"
     # assert len(set(df.images) & set(qa.imgs)) == len(set(df.images)), "Number of images different with dataset"
     imagenames = db.images
 
-    weights = df.images.value_counts().to_dict()
+    weights = df.image.value_counts().to_dict()
     negative = len(imagenames)
     avg_precision = []
     mean_average_precision = {}
@@ -41,9 +41,9 @@ if __name__ == "__main__":
     with click.progressbar(length=len(qa.db), show_pos=True, show_percent=True) as bar:
         for nn, query in enumerate(qa.db):
             noun1, preposition, noun2 = query.split('-')
-            l1 = df[(df['object1'] == noun1)].images.tolist()
-            l2 = df[(df['object2'] == noun2)].images.tolist()
-            l3 = df[(df['preposition'] == preposition)].images.tolist()
+            l1 = df[(df['object1'] == noun1)].image.tolist()
+            l2 = df[(df['object2'] == noun2)].image.tolist()
+            l3 = df[(df['preposition'] == preposition)].image.tolist()
 
             retrieved = {k: v / weights[k] for k, v in cytoolz.frequencies(l1 + l2 + l3).items()}
             valid = [(k, retrieved[k]) for k in sorted(retrieved, key=retrieved.get, reverse=True) if

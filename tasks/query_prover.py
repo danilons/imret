@@ -7,9 +7,10 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import average_precision_score
 from imret.query import Annotation, KnowledgeBase
+from imret.dataset import Dataset
 
 
-def evaluate(queries, ground_truth, kb):
+def evaluate(queries, ground_truth, kb, dataset):
     mean_average_precision = []
     for nn, query in enumerate(ground_truth.db):
         print("Processed {}/{}".format(nn, len(ground_truth.db)))
@@ -22,7 +23,10 @@ def evaluate(queries, ground_truth, kb):
                         retrieved.append(returned)
                     bar.update(1)
 
-            score = average_precision_score(ground_truth.db[query], retrieved)
+            y_true = [img in ground_truth.db[query] for img in dataset.images]
+            y_pred = [img in retrieved for img in dataset.images]
+            score = average_precision_score(y_true, y_pred)
+            # score = average_precision_score(ground_truth.db[query], retrieved)
             print("query {} returned {} images, ground-truth has {}. Score {:.4f}".format(query, len(retrieved),
                                                                                           len(ground_truth.db[query]),
                                                                                           score))
@@ -33,15 +37,21 @@ def evaluate(queries, ground_truth, kb):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='IRRCC program')
-    parser.add_argument('-d', '--dataset_path', action="store", default='data/preposition/index.csv')
+    parser.add_argument('-d', '--dataset_path', action="store", default='data/datasets')
+    parser.add_argument('-i', '--image_path', action="store", default='data/images')
+    parser.add_argument('-p', '--path', action="store", default='data/preposition/index.csv')
     parser.add_argument('-q', '--queries_path', action="store", default='data/query/query_equivalence.csv')
     parser.add_argument('-t', '--test_anno', action="store", default='data/query/test_anno/')
+    parser.add_argument('-o', '--output_file', action="store", default='data/prover/map_prover.json')
     parser.add_argument('--ltb_runner', action="store", default='data/prover/E/PROVER/e_ltb_runner')
     parser.add_argument('--eprover', action="store", default='data/prover/E/PROVER/eprover')
-    parser.add_argument('--sumo', action="store", default='/home/danilo/sigma_run/KBs/SUMO.tptp')
+    # parser.add_argument('--sumo', action="store", default='/home/danilo/sigma_run/KBs/SUMO.tptp')
+    parser.add_argument('--sumo', action="store", default='/Users/danilonunes/Documents/sigma/run/KBs/SUMO.tptp')
+
     params = parser.parse_args()
 
-    df = pd.read_csv(params.dataset_path)
+    db = Dataset(params.dataset_path, 'test', params.image_path)
+    df = pd.read_csv(params.path)
     kb = KnowledgeBase(df,
                        ltb_runner=params.ltb_runner,
                        eprover=params.eprover,
@@ -52,7 +62,7 @@ if __name__ == "__main__":
 
     location = os.path.join(params.test_anno)
     qa = Annotation(location)
-    mean_average_precision = evaluate(queries, qa, kb)
-    with open(os.path.join('data/segmentation/map_prover.json'), 'w') as fp:
+    mean_average_precision = evaluate(queries, qa, kb, db)
+    with open(params.output_file, 'w') as fp:
         json.dump(mean_average_precision, fp)
     print("mAP {:.4f}".format(np.mean(mean_average_precision)))

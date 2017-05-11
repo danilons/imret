@@ -1,5 +1,5 @@
 # coding: utf-8
-import re
+import click
 import tempfile
 import subprocess
 
@@ -99,15 +99,16 @@ class KnowledgeBase:
                           obj2=obj2.title(),
                           prep=prep)
 
-    def prover(self, image, query):
+    def prover(self, image, query, verbose=False):
         try:
             noun1, preposition, noun2 = query.split('-')
         except AttributeError:
-            return image, None, []
+            return False
 
         objects = set(self.df[self.df.image == image].object1) & set(self.df[self.df.image == image].object2)
         if noun1 not in objects or noun2 not in objects:
-            return image, None, []
+            return False
+
         index = self.images.index(image) + 1
 
         irrc_fp = tempfile.NamedTemporaryFile(delete=False)
@@ -136,11 +137,19 @@ class KnowledgeBase:
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=None, shell=True)
         response, _ = process.communicate()
         proved = "Proof found!" in response
-        return image, proved, response
+        if verbose:
+            print(response)
 
-    def runquery(self, query):
+        return proved
+
+    def runquery(self, query, verbose=False):
         answers = []
-        for image in self.images:
-            image, imname, _ = self.prover(image=image, query=query)
-            answers.append((image, imname))
+        with click.progressbar(length=len(self.images), show_pos=True, show_percent=True) as bar:
+            for nn, image in enumerate(self.images):
+                try:
+                    proved = self.prover(image=image, query=query, verbose=verbose)
+                    answers.append((image, proved))
+                except:
+                    print("Something went wrong with image: {}, index: {}".format(image, nn))
+                bar.update(1)
         return answers

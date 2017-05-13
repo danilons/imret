@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 from __future__ import division
-import os
 import argparse
 import click
 import numpy as np
@@ -18,7 +17,12 @@ if __name__ == "__main__":
     parser.add_argument('-f', '--index_file', action="store", default='data/preposition/index.csv')
     parser.add_argument('-a', '--annotation', action="store", default='data/query/test_anno')
     parser.add_argument('-o', '--output_file', action="store", default='data/query/map.json')
+    parser.add_argument('-q', '--queries_path', action="store", default='data/query/query_equivalence.csv')
     parser.add_argument('-t', '--threshold', action="store", default=3.0, type=float)
+    parser.add_argument('--all', dest='all', action="store_true", default=True)
+    parser.add_argument('--no-all', dest='all', action='store_false')
+    parser.set_defaults(feature=True)
+    params = parser.parse_args()
     params = parser.parse_args()
 
     db = Dataset(params.dataset_path, 'test', params.image_path)
@@ -38,8 +42,17 @@ if __name__ == "__main__":
     avg_precision = []
     mean_average_precision = {}
 
-    with click.progressbar(length=len(qa.db), show_pos=True, show_percent=True) as bar:
-        for nn, query in enumerate(qa.db):
+    if not params.all:
+        queries = pd.read_csv(params.queries_path)
+        queries.dropna(inplace=True)
+        queries = dict(zip(queries['Original'], queries['Equivalent']))
+        query_db = {query: ground_truth for query, ground_truth in qa.db.items() if queries.get(query)}
+        assert len(query_db) < len(qa.db), "Unable to filter queries"
+    else:
+        query_db = qa.db
+
+    with click.progressbar(length=len(query_db), show_pos=True, show_percent=True) as bar:
+        for nn, query in enumerate(query_db):
             noun1, preposition, noun2 = query.split('-')
             l1 = df[(df['object1'] == noun1)].image.tolist()
             l2 = df[(df['object2'] == noun2)].image.tolist()
@@ -71,6 +84,7 @@ if __name__ == "__main__":
                 avg_precision.append(0.0)
             else:
                 avg_precision.append(average_precision)
+
             mean_average_precision.setdefault(query, []).append({'tp': tp, 'fp': fp, 'tn': tn, 'fn': fn,
                                                                  'y_test': y_test.tolist(),
                                                                  'y_scores': y_scores.tolist()})

@@ -1,8 +1,8 @@
 index.csv
 .DS_Store
-notebooks/*
 *egg-info
 *.pyc
+notebooks/.ipynb_checkpoints*
 data/*
 datasets/*
 .idea

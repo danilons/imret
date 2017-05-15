@@ -114,9 +114,13 @@ class KnowledgeBase:
         irrc_fp = tempfile.NamedTemporaryFile(delete=False)
         for axiom in self.tptp_by_image(image, index):  # noun1, noun2, index):
             irrc_fp.write(axiom + "\n")
+            if verbose:
+                print(axiom)
         irrc_fp.close()
 
         tptp_query = self.tptp_query(noun1, noun2, preposition)
+        if verbose:
+            print(tptp_query)
         problems_fp = tempfile.NamedTemporaryFile(delete=False)
         problems_fp.write(tptp_query)
         problems_fp.close()
@@ -132,8 +136,12 @@ class KnowledgeBase:
                                   answers=answers_fp.name)
         batch_config_fp.write(batch)
         batch_config_fp.close()
+        if verbose:
+            print(batch)
 
         cmd = "./{} {} {}".format(self.ltb_runner, batch_config_fp.name, self.eprover)
+        if verbose:
+            print(cmd)
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=None, shell=True)
         response, _ = process.communicate()
         proved = "Proof found!" in response

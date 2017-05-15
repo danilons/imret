@@ -18,7 +18,7 @@ if __name__ == "__main__":
     parser.add_argument('-a', '--annotation', action="store", default='data/query/test_anno')
     parser.add_argument('-o', '--output_file', action="store", default='data/query/map.json')
     parser.add_argument('-q', '--queries_path', action="store", default='data/query/query_equivalence.csv')
-    parser.add_argument('-t', '--threshold', action="store", default=3.0, type=float)
+    parser.add_argument('-t', '--threshold', action="store", default=1.0, type=float)
     parser.add_argument('--all', dest='all', action="store_true", default=True)
     parser.add_argument('--no-all', dest='all', action='store_false')
     parser.set_defaults(feature=True)
@@ -85,6 +85,9 @@ if __name__ == "__main__":
             else:
                 avg_precision.append(average_precision)
 
+            print("query {} returned {} images, ground-truth has {}. Score {:.4f}".format(query, len(retrieved),
+                                                                                          len(qa.db[query]),
+                                                                                          average_precision))
             mean_average_precision.setdefault(query, []).append({'tp': tp, 'fp': fp, 'tn': tn, 'fn': fn,
                                                                  'y_test': y_test.tolist(),
                                                                  'y_scores': y_scores.tolist()})

@@ -9,18 +9,21 @@ import numpy as np
 import skimage.io
 from imret.dataset import Dataset
 from imret.color import ColorPalette
+from imret.query import Annotation
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='IRRCC program')
     parser.add_argument('-d', '--dataset_path', action="store", default='data/datasets')
     parser.add_argument('-i', '--image_path', action="store", default='data/images')
     parser.add_argument('-s', '--segmented_path', action="store", default='data/segmented')
-    parser.add_argument('-n', '--names', action="store", default='data/model/segmentation/name_conversion.csv')
+    parser.add_argument('-n', '--names', action="store", default='data/query/name_conversion.csv')
+    parser.add_argument('-a', '--annot', action="store", default='data/query/test_anno/')
     params = parser.parse_args()
 
     iou = {}
     color_palette = ColorPalette(name_conversion=params.names)
     dset = Dataset(params.dataset_path, 'test', params.image_path)
+    annot = Annotation(params.annot)
     with click.progressbar(length=len(dset.images), show_pos=True, show_percent=True) as bar:
         for imname in dset.images:
             segmented_name = os.path.join(params.segmented_path, imname.replace('.jpg', '.png'))
@@ -41,13 +44,16 @@ if __name__ == "__main__":
             scale = np.array([fx, fy])
 
             ground_truth = dset.ground_truth(imname)
-            for object_name, contour in ground_truth.iteritems():
+            for object_name, contour in ground_truth.items():
                 name = re.match('\D+', object_name).group()
                 name = color_palette.class_names.get(name, name)
                 try:
                     class_id = color_palette.class_id(name)
                     color = color_palette[name]
                 except ValueError:
+                    continue
+
+                if name not in annot.normalized_names:
                     continue
 
                 img1 = cv2.inRange(segmented, color, color)

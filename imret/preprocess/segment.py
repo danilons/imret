@@ -15,14 +15,6 @@ class Segment(object):
         print("Creating net with: \n{} \n{}".format(prototxt, weights))
         self.net = caffe.Net(prototxt, weights, caffe.TEST)
         self.color_palette = ColorPalette(name_conversion=names)
-        # if mean:
-        #     print("Loading image from file: {}".format(mean))
-        #     data = open(mean, 'rb').read()
-        #     blob = caffe.proto.caffe_pb2.BlobProto()
-        #     blob.ParseFromString(data)
-        #     mu = np.array(caffe.io.blobproto_to_array(blob))[0]
-        #     mu = mu.mean(1).mean(1)
-
         self.transformer = caffe.io.Transformer({'data': self.net.blobs['data'].data.shape})
         self.transformer.set_transpose('data', (2, 0, 1))  # move image channels to outermost dimension
         # self.transformer.set_channel_swap('data', (2, 1, 0))  # swap channels from RGB to BGR

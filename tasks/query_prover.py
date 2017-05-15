@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import os
 import argparse
-import click
 import json
 import numpy as np
 import pandas as pd
@@ -11,21 +10,21 @@ from imret.dataset import Dataset
 
 
 def evaluate(queries, ground_truth, kb, dataset, verbose=False):
-    mean_average_precision = []
-    for nn, query in enumerate(ground_truth.db):
-        print("Processed {}/{}".format(nn, len(ground_truth.db)))
+    mean_average_precision_ = []
+    for nn, query in enumerate(ground_truth):
+        print("Processed {}/{}".format(nn, len(ground_truth)))
         equivalent = queries.get(query)
         if equivalent:
             retrieved = [imname for imname, found in kb.runquery(equivalent, verbose=verbose) if found]
-            y_true = [img in ground_truth.db[query] for img in dataset.images]
+            y_true = [img in ground_truth[query] for img in dataset.images]
             y_pred = [img in retrieved for img in dataset.images]
             score = average_precision_score(y_true, y_pred)
             print("query {} returned {} images, ground-truth has {}. Score {:.4f}".format(query, len(retrieved),
-                                                                                          len(ground_truth.db[query]),
+                                                                                          len(ground_truth[query]),
                                                                                           score))
-            mean_average_precision.append(score)
+            mean_average_precision_.append(score)
 
-    return mean_average_precision
+    return mean_average_precision_
 
 
 if __name__ == "__main__":
@@ -38,8 +37,8 @@ if __name__ == "__main__":
     parser.add_argument('-o', '--output_file', action="store", default='data/prover/map_prover.json')
     parser.add_argument('--ltb_runner', action="store", default='data/prover/E/PROVER/e_ltb_runner')
     parser.add_argument('--eprover', action="store", default='data/prover/E/PROVER/eprover')
-    parser.add_argument('--sumo', action="store", default='/home/danilo/sigma_run/KBs/SUMO.tptp')
-    # parser.add_argument('--sumo', action="store", default='/Users/danilonunes/Documents/sigma/run/KBs/SUMO.tptp')
+    # parser.add_argument('--sumo', action="store", default='/home/danilo/sigma_run/KBs/SUMO.tptp')
+    parser.add_argument('--sumo', action="store", default='/Users/danilonunes/Documents/sigma/run/KBs/SUMO.tptp')
     parser.add_argument('--verbose', dest='verbose', action="store_true", default=False)
     parser.add_argument('--no-verbose', dest='verbose', action='store_false')
     parser.set_defaults(feature=True)
@@ -53,11 +52,15 @@ if __name__ == "__main__":
                        sumo=params.sumo)
 
     queries = pd.read_csv(params.queries_path)
+    queries.dropna(inplace=True)
     queries = dict(zip(queries['Original'], queries['Equivalent']))
 
     location = os.path.join(params.test_anno)
     qa = Annotation(location)
-    mean_average_precision = evaluate(queries, qa, kb, db, params.verbose)
+
+    query_db = {query: ground_truth for query, ground_truth in qa.db.items() if queries.get(query)}
+
+    mean_average_precision = evaluate(queries, query_db, kb, db, params.verbose)
     with open(params.output_file, 'w') as fp:
         json.dump(mean_average_precision, fp)
     print("mAP {:.4f}".format(np.mean(mean_average_precision)))

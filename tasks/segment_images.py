@@ -5,6 +5,7 @@ import skimage.io
 import click
 from imret.dataset import dataset
 from imret.preprocess import segment
+from imret.query import Annotation
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='IRRCC program')
@@ -16,8 +17,13 @@ if __name__ == "__main__":
     parser.add_argument('-w', '--weights', action="store", default='data/model/snapshot.caffemodel')
     parser.add_argument('-m', '--mean', action="store", default='data/model/mean.binaryproto')
     parser.add_argument('-n', '--names', action="store", default='data/model/name_conversion.csv')
+    parser.add_argument('-l', '--annot', action='store', default='data/query')
+    parser.add_argument('--info', action='store', default='data/model/objectInfo150.txt')
     parser.add_argument('--gpu', dest='gpu', action="store_true", default=True)
     parser.add_argument('--no-gpu', dest='gpu', action='store_false')
+    parser.set_defaults(feature=True)
+    parser.add_argument('--force', dest='force', action="store_true", default=False)
+    parser.add_argument('--no-force', dest='force', action='store_false')
     parser.set_defaults(feature=True)
     params = parser.parse_args()
 
@@ -26,12 +32,15 @@ if __name__ == "__main__":
                           weights=params.weights,
                           names=params.names,
                           mean=params.mean,
-                          gpu=params.gpu)
+                          gpu=params.gpu,
+                          objectInfo=params.info)
+
+    annot = Annotation(os.path.join(params.annot, '{}_anno'.format(params.suffix.lower())))
 
     with click.progressbar(length=len(dset.images), show_pos=True, show_percent=True) as bar:
         for imname in dset.images:
             output_name = os.path.join(params.output_path, imname.replace('.jpg', '.png'))
-            if os.path.exists(output_name):
+            if os.path.exists(output_name) and not params.force:
                 bar.update(1)
                 continue
 
@@ -39,7 +48,7 @@ if __name__ == "__main__":
             if image is None:
                 bar.update(1)
                 continue
-            segmentation = smt.segmentation(image)
+            segmentation = smt.segmentation(image, annot=annot)
             skimage.io.imsave(output_name, segmentation)
             bar.update(1)
 

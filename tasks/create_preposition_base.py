@@ -13,7 +13,7 @@ from imret.query import Annotation
 
 def save_relations(dataset, qa, output_folder, alpha=.4):
     with click.progressbar(length=len(qa.db), show_pos=True, show_percent=True) as bar:
-        for query, imgs in qa.db.iteritems():
+        for query, imgs in qa.db.items():
             obj1, prep, obj2 = query.split('-')
             stdout.write("\n")
             for nn, imname in enumerate(imgs):

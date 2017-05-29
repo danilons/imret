@@ -1,5 +1,6 @@
 # coding: utf-8
 import pandas as pd
+import numpy as np
 from .palette import PALETTE
 
 
@@ -26,7 +27,7 @@ class ColorPalette:
 
     def get_original_names(self, name):
         names = []
-        for k, v in self.class_names.iteritems():
+        for k, v in self.class_names.items():
             if name == v:
                 names.append(k)
         return names
@@ -35,4 +36,13 @@ class ColorPalette:
         with open(file_name, 'w') as fp:
             for name in self.names:
                 class_id = self.class_id(name)
-                fp.write("#{}: \t {}\n".format(class_id, name))
+                fp.write("{}: \t {}\n".format(class_id, name))
+
+    def get_name_from_color(self, color):
+        return self.names[np.nonzero(np.all(self.palette == color, axis=1)[0][0])]
+
+    def save_colormap(self, file_name):
+        with open(file_name, 'w') as fp:
+            for name in self.names:
+                r, g, b = self[name]
+                fp.write("{} {} {} \n".format(r, g, b))

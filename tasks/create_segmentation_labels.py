@@ -29,13 +29,13 @@ def create_label(scale, ground_truth, rgb=True):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='IRRCC program')
-    parser.add_argument('-d', '--dataset_path', action="store", default='data/')
+    parser.add_argument('-d', '--dataset_path', action="store", default='data/datasets')
     parser.add_argument('-s', '--suffix', action="store", default='train')
     parser.add_argument('-i', '--image_path', action="store", default='data/images')
-    parser.add_argument('-r', '--resized_path', action="store", default='data/resized')
-    parser.add_argument('-l', '--label_path', action="store", default='data/labels')
-    parser.add_argument('-m', '--mark_path', action="store", default='data/mark')
-    parser.add_argument('-n', '--names', action="store", default='data/model/name_conversion.csv')
+    parser.add_argument('-r', '--resized_path', action="store", default='data/imgs/resized')
+    parser.add_argument('-l', '--label_path', action="store", default='data/imgs/labels')
+    parser.add_argument('-m', '--mark_path', action="store", default='data/imgs/mark')
+    parser.add_argument('-n', '--names', action="store", default='data/query/name_conversion.csv')
     parser.set_defaults(feature=True)
     params = parser.parse_args()
 

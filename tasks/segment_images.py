@@ -15,8 +15,7 @@ if __name__ == "__main__":
     parser.add_argument('-o', '--output_path', action="store", default='data/segmented')
     parser.add_argument('-p', '--prototxt', action="store", default='data/model/deploy.prototxt')
     parser.add_argument('-w', '--weights', action="store", default='data/model/snapshot.caffemodel')
-    parser.add_argument('-m', '--mean', action="store", default='data/model/mean.binaryproto')
-    parser.add_argument('-n', '--names', action="store", default='data/model/name_conversion.csv')
+    parser.add_argument('-n', '--names', action="store", default='data/query/name_conversion.csv')
     parser.add_argument('-l', '--annot', action='store', default='data/query')
     parser.add_argument('--info', action='store', default='data/model/objectInfo150.txt')
     parser.add_argument('--gpu', dest='gpu', action="store_true", default=True)
@@ -31,9 +30,7 @@ if __name__ == "__main__":
     smt = segment.Segment(prototxt=params.prototxt,
                           weights=params.weights,
                           names=params.names,
-                          mean=params.mean,
-                          gpu=params.gpu,
-                          objectInfo=params.info)
+                          gpu=params.gpu,)
 
     annot = Annotation(os.path.join(params.annot, '{}_anno'.format(params.suffix.lower())))
 
@@ -48,7 +45,7 @@ if __name__ == "__main__":
             if image is None:
                 bar.update(1)
                 continue
-            segmentation = smt.segmentation(image, annot=annot)
+            segmentation = smt.segmentation(image, False)
             skimage.io.imsave(output_name, segmentation)
             bar.update(1)
 

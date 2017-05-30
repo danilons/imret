@@ -5,15 +5,15 @@ import caffe
 import numpy as np
 import itertools
 import pandas as pd
-import scipy
+import scipy.misc
 import argparse
 from click import progressbar
 from imret.query import Annotation
 from imret.dataset import Dataset
 from imret.color import ColorPalette
-from imret.topology import topology_relation
 
 net = None
+
 
 def create_mask(image, pixel_value, color):
     w, h = image.shape
@@ -31,29 +31,29 @@ def chunks(lst, size):
     for i in xrange(0, len(lst), size):
         yield lst[i:i + size]
 
-def process_image(image, segmented, annot, labels, transformer, df, batch_size=32):
+
+def process_image(image, segmented, labels, transformer, color_palette, batch_size=32):
     alpha = .4
-    index = []
+    indexed = []
     images = []
     objects = []
     image_ = scipy.misc.imresize(image, segmented.shape, interp='bilinear')
 
     for (x1, x2) in itertools.permutations(np.unique(segmented), 2):
-        obj1 = df.ix[x1].Name
-        obj2 = df.ix[x2].Name
+        obj1 = color_palette.get_name(x1)
+        obj2 = color_palette.get_name(x2)
 
-        if obj1 in annot.normalized_names and obj2 in annot.normalized_names:
-            mask1, overlay1 = create_mask(segmented, x1, color=(255, 0, 0))
-            mask2, overlay2 = create_mask(segmented, x2, color=(0, 0, 255))
+        mask1, overlay1 = create_mask(segmented, x1, color=(255, 0, 0))
+        mask2, overlay2 = create_mask(segmented, x2, color=(0, 0, 255))
 
-            img1 = cv2.bitwise_and(image_, image_, mask=mask1)
-            img2 = cv2.bitwise_and(image_, image_, mask=mask2)
-            img = cv2.bitwise_or(img1, img2)
-            cv2.addWeighted(overlay1, alpha, img, 1 - alpha, 0, img)
-            cv2.addWeighted(overlay2, alpha, img, 1 - alpha, 0, img)
-            img = scipy.misc.imresize(img[:, :, (2, 1, 0)], (256, 256), interp='bilinear')
-            images.append(img)
-            objects.append((obj1, obj2))
+        img1 = cv2.bitwise_and(image_, image_, mask=mask1)
+        img2 = cv2.bitwise_and(image_, image_, mask=mask2)
+        img = cv2.bitwise_or(img1, img2)
+        cv2.addWeighted(overlay1, alpha, img, 1 - alpha, 0, img)
+        cv2.addWeighted(overlay2, alpha, img, 1 - alpha, 0, img)
+        img = scipy.misc.imresize(img[:, :, (2, 1, 0)], (256, 256), interp='bilinear')
+        images.append(img)
+        objects.append((obj1, obj2))
 
     # feed net
     for n1, chunk in enumerate(chunks(zip(images, objects), size=batch_size)):
@@ -70,8 +70,8 @@ def process_image(image, segmented, annot, labels, transformer, df, batch_size=3
             prep = labels[prob.argmax()]
             score = prob.max()
             _, (obj1, obj2) = chunk[idx2]
-            index.append([prep, obj1, obj2, score])
-    return index
+            indexed.append([prep, obj1, obj2, score])
+    return indexed
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='IRRCC program')
@@ -84,7 +84,7 @@ if __name__ == "__main__":
     parser.add_argument('-a', '--annot_folder', action="store", default='data/query/test_anno')
     parser.add_argument('-o', '--output_file', action="store", default='data/preposition/index2.csv')
     parser.add_argument('-p', '--dataset_path', action="store", default='data/datasets')
-    parser.add_argument('-f', '--object_info', action="store", default='data/models/preposition/objectInfo150.txt')
+    parser.add_argument('-f', '--object_info', action="store", default='data/query/name_conversion.csv')
     parser.add_argument('-b', '--batch_size', action="store", default=32, type=int)
     parser.add_argument('--gpu', dest='gpu', action="store_true", default=False)
     parser.add_argument('--no-gpu', dest='gpu', action='store_false')
@@ -99,12 +99,9 @@ if __name__ == "__main__":
         caffe.set_mode_cpu()
 
     net = caffe.Net(opts.deploy_file, opts.caffemodel, caffe.TEST)
-
+    cp = ColorPalette(opts.object_info)
     annot = Annotation(opts.annot_folder)
     dset = Dataset(opts.dataset_path, 'test', opts.image_path)
-
-    df = pd.read_csv(opts.object_info, sep='\t').set_index('Idx')
-    df['Name'] = df['Name'].apply(lambda x: x.strip())
 
     with open(opts.names) as fp:
         labels = [line.strip().replace('_', ' ') for line in fp.readlines()]
@@ -136,7 +133,7 @@ if __name__ == "__main__":
                 bar.update(1)
                 continue
 
-            idx = process_image(image, segmented, annot, labels, transformer, df, opts.batch_size)
+            idx = process_image(image, segmented, labels, transformer, cp, opts.batch_size)
             for (prep, obj1, obj2, score) in idx:
                 index.setdefault('image', []).append(imname)
                 index.setdefault('preposition', []).append(prep)

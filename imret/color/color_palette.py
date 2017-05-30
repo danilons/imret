@@ -38,9 +38,6 @@ class ColorPalette:
                 class_id = self.class_id(name)
                 fp.write("{}: \t {}\n".format(class_id, name))
 
-    def get_name_from_color(self, color):
-        return self.names[np.nonzero(np.all(self.palette == color, axis=1)[0][0])]
-
     def save_colormap(self, file_name):
         with open(file_name, 'w') as fp:
             for name in self.names:

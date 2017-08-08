@@ -23,14 +23,31 @@ class Segment(object):
     def shape(self):
         return self.net.blobs['data'].data.shape[-2:]
 
-    def segmentation(self, image, return_paletted=True):
+    def segmentation_by_thresholds(self, image, thresholds):
         fx = image.shape[0] / float(self.shape[0])
         fy = image.shape[1] / float(self.shape[1])
         img = cv2.resize(image, self.shape, fx, fy)
         transformed_image = self.transformer.preprocess('data', img)
         self.net.blobs['data'].data[...] = transformed_image
-        output = self.net.forward()
-        segmentation = output[self.net.outputs[-1]][0].argmax(axis=0)
+        output = self.net.forward()[self.net.outputs[-1]][0]
+        images = {}
+        for threshold in thresholds:
+            x, y = np.where(output.max(axis=0) > threshold)
+            segmentation = np.zeros(self.shape, dtype=np.uint8)
+            segmentation[x, y] = output[:, x, y].argmax(axis=0)
+            images[threshold] = segmentation
+        return images
+
+    def segmentation(self, image, return_paletted=True, threshold=0.5, **kwargs):
+        fx = image.shape[0] / float(self.shape[0])
+        fy = image.shape[1] / float(self.shape[1])
+        img = cv2.resize(image, self.shape, fx, fy)
+        transformed_image = self.transformer.preprocess('data', img)
+        self.net.blobs['data'].data[...] = transformed_image
+        output = self.net.forward()[self.net.outputs[-1]][0]
+        x, y = np.where(output.max(axis=0) > threshold)
+        segmentation = np.zeros(self.shape, dtype=np.uint8)
+        segmentation[x, y] = output[:, x, y].argmax(axis=0)
         if not return_paletted:
             return segmentation
 
@@ -42,10 +59,10 @@ class Segment(object):
             paletted[x, y, :] = np.array([r, g, b])
         return paletted
 
-    def weighted_image(self, image, alpha=.7):
+    def weighted_image(self, image, alpha=.7, **kwargs):
         fx = image.shape[0] / float(self.shape[0])
         fy = image.shape[1] / float(self.shape[1])
         img = cv2.resize(image, self.shape, fx, fy)
-        segmented = self.segmentation(image)
+        segmented = self.segmentation(image, **kwargs)
         cv2.addWeighted(segmented, alpha, img, 1 - alpha, 0, img)
         return img[:, :, (2, 1, 0)]

@@ -27,9 +27,9 @@ class Dataset(object):
 
     def get_im_array(self, image, rgb=False):
         img = cv2.imread(os.path.join(self.image_path, image))
-        if img is not None and rgb:
-            img = img[:, :, (2, 1, 0)]
-        return img
+        if img is None:
+            return None
+        return img if not rgb else img[:, :, (2, 1, 0)]
 
     def get_objects(self, image, classnames):
         imname = image.replace('.jpg', '.png')

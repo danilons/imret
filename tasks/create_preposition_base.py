@@ -26,25 +26,18 @@ def save_relations(dataset, qa, output_folder, alpha=.4):
                 contour2 = contours.get(obj2)
                 if contour1 is not None and contour2 is not None and imarray is not None:
                     mask = np.zeros(imarray.shape[:2], imarray.dtype)
-                    m1 = np.zeros(imarray.shape, imarray.dtype)
-                    m2 = np.zeros(imarray.shape, imarray.dtype)
+                    m1 = imarray.copy()  # np.zeros(imarray.shape, imarray.dtype)
+                    m2 = imarray.copy()  # np.zeros(imarray.shape, imarray.dtype)
 
                     cv2.drawContours(mask, [contour1.astype(np.int32)], -1, 255, -1)
                     cv2.drawContours(mask, [contour2.astype(np.int32)], -1, 255, -1)
                     cv2.drawContours(m1, [contour1.astype(np.int32)], -1, (255, 0, 0), -1)
                     cv2.drawContours(m2, [contour2.astype(np.int32)], -1, (0, 0, 255), -1)
-                    topology = topology_relation(imarray.shape[:2], {obj1: contour1, obj2: contour2})
+                    # topology = topology_relation(imarray.shape[:2], {obj1: contour1, obj2: contour2})
                     objected = cv2.bitwise_and(imarray, imarray, mask=mask)
                     cv2.addWeighted(m1, alpha, objected, 1 - alpha, 0, objected)
                     cv2.addWeighted(m2, alpha, objected, 1 - alpha, 0, objected)
-                    try:
-                        dirname = os.path.join(output_folder, prep + "-" + topology[0]['relation'])
-                    except TypeError:
-                        dirname = os.path.join(output_folder, prep + "-EQ")
 
-                    objected = cv2.bitwise_and(imarray, imarray, mask=mask)
-                    cv2.addWeighted(m1, alpha, objected, 1 - alpha, 0, objected)
-                    cv2.addWeighted(m2, alpha, objected, 1 - alpha, 0, objected)
                     dirname = os.path.join(output_folder, prep)
                     imgfile = "{}-{}-{}.png".format(imname.replace('.jpg', ''), obj1, obj2)
                     if not os.path.exists(dirname):
@@ -60,7 +53,7 @@ if __name__ == "__main__":
     parser.add_argument('-i', '--image_path', action="store", default='data/images')
     parser.add_argument('-n', '--names', action="store", default='data/name_conversion.csv')
     parser.add_argument('-s', '--annot_folder', action="store", default='data/query/train_anno')
-    parser.add_argument('-o', '--output', action="store", default='data/preposition')
+    parser.add_argument('-o', '--output', action="store", default='data/preposition2')
     params = parser.parse_args()
 
     suffix = re.search('(train|test)', params.annot_folder).group()

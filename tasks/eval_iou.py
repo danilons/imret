@@ -56,9 +56,12 @@ if __name__ == "__main__":
                 if name not in annot.normalized_names:
                     continue
 
-                img1 = cv2.inRange(segmented, color, color)
+                # img1 = cv2.inRange(segmented, color, color)
+                img1 = np.zeros(segmented.shape, dtype=np.uint8)
+                x, y = np.where(segmented == class_id)
+                img1[x, y] = 255
 
-                img2 = np.zeros(segmented.shape[:2], dtype=np.uint8)
+                img2 = np.zeros(segmented.shape, dtype=np.uint8)
                 cnt = contour * scale
                 cv2.drawContours(img2, [cnt.astype(np.int32)], -1, 255, -1)
 

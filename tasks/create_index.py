@@ -28,7 +28,7 @@ def create_mask(image, pixel_value, color):
 
 def chunks(lst, size):
     """Yield successive n-sized chunks from lst."""
-    for i in xrange(0, len(lst), size):
+    for i in range(0, len(lst), size):
         yield lst[i:i + size]
 
 

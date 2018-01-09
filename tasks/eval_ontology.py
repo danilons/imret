@@ -7,8 +7,16 @@ import json
 import pandas as pd
 import numpy as np
 from imret.query import KnowledgeBase, Annotation
-from imret.metrics import apk
+# from imret.metrics import apk
 
+def apk(expected, predicted, k=4317):
+    retrieved = np.array([ret in expected for ret in predicted[:k]]).astype(np.int32)
+    if retrieved.sum() == 0:
+        return 0.0
+
+    scores = np.arange(len(retrieved)) + 1
+    valids = np.where(retrieved > 0)
+    return np.sum(np.cumsum(retrieved[valids]) / scores[valids].astype(np.float32)) / float(min(len(expected), k))
 
 
 def evaluate(queries, ground_truth, kb):

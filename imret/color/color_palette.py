@@ -15,6 +15,9 @@ class ColorPalette:
         index = self.names.index(class_names)
         return self.palette[index, :]
 
+    def __contains__(self, item):
+        return item in self.class_names
+
     def class_id(self, name):
         class_names = self.class_names.get(name, name)
         return self.names.index(class_names)

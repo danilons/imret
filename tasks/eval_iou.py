@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from __future__ import division
 import os
+import glob
 import re
 import argparse
 import cv2
@@ -18,14 +19,21 @@ if __name__ == "__main__":
     parser.add_argument('-s', '--segmented_path', action="store", default='data/segmented')
     parser.add_argument('-n', '--names', action="store", default='data/query/name_conversion.csv')
     parser.add_argument('-a', '--annot', action="store", default='data/query/test_anno/')
+    parser.add_argument('-l', '--labels_file', action="store", default='data/scene/outdoor/labels.txt')
     params = parser.parse_args()
 
     iou = {}
     color_palette = ColorPalette(name_conversion=params.names)
     dset = Dataset(params.dataset_path, 'test', params.image_path)
     annot = Annotation(params.annot)
-    with click.progressbar(length=len(dset.images), show_pos=True, show_percent=True) as bar:
-        for imname in dset.images:
+
+    with open(params.labels_file, 'r') as fp:
+        labels = dict([line.replace('#', '').replace(':', '').strip().split() for line in fp.readlines()])
+
+    images = glob.glob(os.path.join(params.segmented_path, "*.png"))
+    with click.progressbar(length=len(images), show_pos=True, show_percent=True) as bar:
+        for imgname in images:
+            imname = os.path.basename(imgname).replace(".png", ".jpg")
             segmented_name = os.path.join(params.segmented_path, imname.replace('.jpg', '.png'))
             try:
                 segmented = skimage.io.imread(segmented_name)
@@ -44,17 +52,21 @@ if __name__ == "__main__":
             scale = np.array([fx, fy])
 
             ground_truth = dset.ground_truth(imname)
+            colors = {v: k for k, v in labels.items()}
             for object_name, contour in ground_truth.items():
                 name = re.match('\D+', object_name).group()
                 name = color_palette.class_names.get(name, name)
-                try:
-                    class_id = color_palette.class_id(name)
-                    color = color_palette[name]
-                except ValueError:
+                # try:
+                #     class_id = color_palette.class_id(name)
+                #     color = color_palette[name]
+                # except ValueError:
+                #     continue
+                #
+                # if name not in annot.normalized_names:
+                #     continue
+                if name not in labels.values():
                     continue
-
-                if name not in annot.normalized_names:
-                    continue
+                class_id = int(colors[name])
 
                 # img1 = cv2.inRange(segmented, color, color)
                 img1 = np.zeros(segmented.shape, dtype=np.uint8)

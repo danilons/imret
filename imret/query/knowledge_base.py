@@ -2,26 +2,32 @@
 import click
 import tempfile
 import subprocess
+import multiprocessing
+from functools import partial
+
+
+def _query(image, kb, query, verbose=False):
+    return image, kb.prover(image=image, query=query, verbose=verbose)
 
 
 class KnowledgeBase:
 
-    def __init__(self, df, ltb_runner, eprover, sumo):
+    def __init__(self, df, ltb_runner, eprover, sumo, user_assertions):
         self.ltb_runner = ltb_runner
         self.eprover = eprover
-        self.sumo = sumo
-        self.df = df
+        self.df = df[df.object1 != '__background__'][df.object2 != '__background__']
         self.images = list(set(df.image))
         self.index = 0
         self.batch = "\n".join(["% SZS start BatchConfiguration",
                                 "division.category LTB.SMO",
                                 "output.required Assurance",
                                 "output.desired Proof Answer",
-                                "limit.time.problem.wc 60",
+                                "limit.time.problem.wc 120",
                                 "% SZS end BatchConfiguration",
                                 "% SZS start BatchIncludes",
                                 "include('{tptp}').",
-                                "include('{sumo}').",
+                                "include('{user}').".format(user=user_assertions),
+                                "include('{sumo}').".format(sumo=sumo),
                                 "% SZS end BatchIncludes",
                                 "% SZS start BatchProblems",
                                 "{problems} {answers}",
@@ -46,7 +52,8 @@ class KnowledgeBase:
             obj1 = "{}{}".format(row.object1, imindex)
             obj2 = "{}{}".format(row.object2, imindex)
             prep = row['preposition'].title().replace(" ", "")
-            axiom_ = "(holdsDuring Now (orientation {} {} {}))".format(obj1, obj2, prep)
+            # axiom_ = "(holdsDuring Now (orientation {} {} {}))".format(obj1, obj2, prep)
+            axiom_ = "(orientation {} {} {})".format(obj1, obj2, prep)
             formula = axiom_.replace("_", "")
             formulae.append(formula)
 
@@ -54,16 +61,10 @@ class KnowledgeBase:
 
     def tptp_by_image(self, image, imindex=0):
         imgname = image
-        frame = self.df[(self.df['image'] == imgname)]  # & (self.df['object1'] == object1) & (self.df['object2'] == object2)]
+        frame = self.df[(self.df['image'] == imgname)]
         objects = set(frame.object1) | set(frame.object2)
         axioms = []
         names = set()
-
-        # for _ in xrange(1):
-        #     axiom = "fof(kb_IRRC_{},axiom, (( s__instance(s__{}__m,s__Image)))).".format(self.index,
-        #                                                                                  imgname.replace('.jpg', ''))
-        #     axioms.append(axiom)
-        #     self.index += 1
 
         for obj in objects:
             objname = "{}{}".format(obj, imindex)
@@ -130,8 +131,7 @@ class KnowledgeBase:
         answers_fp.close()
 
         batch_config_fp = tempfile.NamedTemporaryFile(delete=False)
-        batch = self.batch.format(sumo=self.sumo,
-                                  tptp=irrc_fp.name,
+        batch = self.batch.format(tptp=irrc_fp.name,
                                   problems=problems_fp.name,
                                   answers=answers_fp.name)
         batch_config_fp.write(batch)
@@ -151,13 +151,7 @@ class KnowledgeBase:
         return proved
 
     def runquery(self, query, verbose=False):
-        answers = []
-        with click.progressbar(length=len(self.images), show_pos=True, show_percent=True) as bar:
-            for nn, image in enumerate(self.images):
-                try:
-                    proved = self.prover(image=image, query=query, verbose=verbose)
-                    answers.append((image, proved))
-                except:
-                    print("Something went wrong with image: {}, index: {}".format(image, nn))
-                bar.update(1)
+        f_partial = partial(_query, kb=self, query=query, verbose=verbose)
+        pool = multiprocessing.Pool(4)
+        answers = pool.map(f_partial, self.images)
         return answers

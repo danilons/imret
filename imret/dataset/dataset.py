@@ -17,6 +17,9 @@ class Dataset(object):
     def images(self):
         return self.coordinates.keys()
 
+    def ground_truth_objects(self, image):
+        return self.coordinates[image].keys()
+
     def ground_truth(self, image):
         gold_standard = self.coordinates[image]
         contour = {}

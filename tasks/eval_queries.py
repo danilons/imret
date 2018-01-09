@@ -1,29 +1,46 @@
 #!/usr/bin/env python
 from __future__ import division
 import argparse
-import random
 import click
 import numpy as np
 import pandas as pd
 import cytoolz
-import matplotlib.pyplot as plt
-import matplotlib.colors
-import json
-from sklearn.metrics import precision_recall_curve
-from sklearn.metrics import average_precision_score, roc_curve, label_ranking_average_precision_score
+import os
+import cv2
 from imret.query import Annotation
 from imret.dataset import Dataset
+from imret.color import ColorPalette
 
 
-def apk(expected, predicted, k=10):
-    retrieved = np.array([ret in expected for ret in predicted]).astype(np.int32)
-    scores = np.arange(len(retrieved)) + 1
-    valids = np.where(retrieved > 0)
+def apk(expected, predicted, k=4317):
+    retrieved = np.array([ret in expected for ret in predicted[:k]]).astype(np.int32)
     if retrieved.sum() == 0:
         return 0.0
 
-    # return np.sum(np.cumsum(retrieved[valids]) / scores[valids].astype(np.float32)) / float(len(expected))
-    return np.sum(np.cumsum(retrieved[valids]) / scores[valids].astype(np.float32)) / float(len(retrieved))
+    scores = np.arange(len(retrieved)) + 1
+    valids = np.where(retrieved > 0)
+    return np.sum(np.cumsum(retrieved[valids]) / scores[valids].astype(np.float32)) / float(min(len(expected), k))
+
+
+
+cp = ColorPalette('data/query/name_conversion.csv')
+freqs = {}
+
+def filter_by_area(retrieved, noun1, noun2):
+    for imname in retrieved:
+        name = os.path.join('data/segmented', imname.replace('.jpg', '.png'))
+        freq = freqs.get(name, None)
+        if freq is None:
+            img = cv2.imread(name, 0)
+            if img is None:
+                continue
+            freq = {cp.get_name(k): v for k, v in cytoolz.frequencies(img.flatten()).items()}
+
+        freqs[name] = freq
+
+        if freq.get(noun1, 0) > 10000 and freq.get(noun2, 0) > 10000:
+            yield imname
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='IRRCC program')
@@ -71,97 +88,69 @@ if __name__ == "__main__":
     apks = []
     queries_by_obj = {}
     queries_by_prep = {}
+    retrieved_by_query = {}
 
-    with click.progressbar(length=len(query_db), show_pos=True, show_percent=True) as bar:
-        for nn, query in enumerate(query_db):
-            if len(qa.db[query]) == 0:
-                print "invalid query {}".format(query)
-                continue
+    import ipdb; ipdb.set_trace()
+    # with click.progressbar(length=len(query_db), show_pos=True, show_percent=True) as bar:
+    for nn, query in enumerate(sorted(query_db)):
+        if len(qa.db[query]) == 0:
+            # print("invalid query {}".format(query))
+            continue
 
-            noun1, preposition, noun2 = query.split('-')
-            preposition = preposition.replace('_', ' ')
-            # preposition = preposition.replace('below', 'under').replace('across from', 'under')
-            noun1 = noun1.replace('cars', 'car').replace('rocks', 'rock').replace('flowers', 'flower')
-            noun2 = noun2.replace('cars', 'car').replace('rocks', 'rock').replace('flowers', 'flower')
+        ground_truth = [im for im in qa.db[query] if im.endswith('.jpg')]
+
+        noun1, preposition, noun2 = query.split('-')
+
+        preposition = preposition.replace('_', ' ')
+        noun1 = noun1.replace('cars', 'car').replace('rocks', 'rock').replace('flowers', 'flower')
+        noun2 = noun2.replace('cars', 'car').replace('rocks', 'rock').replace('flowers', 'flower')
+        # if preposition in ['right of', 'inside of', 'left of', 'across from']:
+        #     valid = df[(df.object1 == noun1) & (df.object2 == noun2)][['image', 'score']]
+        # else:
+        #     valid = df[(df.object1 == noun1) & (df.object2 == noun2) & (df.preposition == preposition)][['image', 'score']]
+
+        if preposition in ['right of', 'inside of', 'left of', 'across from']:
+            valid = df[(df.object1 == noun1) & (df.object2 == noun2)][['image', 'score']]
+        else:
             valid = df[(df.object1 == noun1) & (df.object2 == noun2) & (df.preposition == preposition)][['image', 'score']]
-            # if len(valid) == 0:
-            #     valid = df[((df.object1 == noun1) | (df.object2 == noun2)) | (df.preposition == preposition)][['image', 'score']]
 
-            retrieved = []
-            relevance = []
-            if len(valid) > 0:
-                # retrieved, relevance = zip(*valid)
-                valid.drop_duplicates('image', inplace=True)
-                retrieved, relevance = valid['image'].values, valid['score'].values
+        if noun1 == noun2:
+            valid = df[(df.object1 == noun1) | (df.object2 == noun2)][['image', 'score']]
 
-            tp = len(set(qa.db[query]) & set(retrieved))
-            fp = len(retrieved) - tp
-            tn = negative - len(set(qa.db[query]))
-            fn = len(qa.db[query]) - tp
+        retrieved = []
+        relevance = []
+        if len(valid) > 0:
+            valid.drop_duplicates('image', inplace=True)
+            retrieved, relevance = valid['image'].values, valid['score'].values
 
-            y_test = np.zeros(negative, dtype=np.float32)
-            for img in qa.db[query]:
+        tp = len(set(ground_truth) & set(retrieved))
+        fp = len(retrieved) - tp
+        tn = negative - len(set(ground_truth))
+        fn = len(ground_truth) - tp
+
+        y_test = np.zeros(negative, dtype=np.float32)
+        for img in ground_truth:
+            try:
                 y_test[imagenames.index(img)] = 1.
+            except ValueError:
+                pass
 
-            y_scores = np.zeros(negative, dtype=np.float32)
-            for n1, img in enumerate(retrieved):
-                y_scores[imagenames.index(img)] = relevance[n1]
+        y_scores = np.zeros(negative, dtype=np.float32)
+        for n1, img in enumerate(retrieved):
+            y_scores[imagenames.index(img)] = relevance[n1]
 
-            if len(retrieved) > 0:
-                average_precision = average_precision_score(y_test, y_scores)
-            else:
-                average_precision = 0
+        # retrieved = list(filter_by_area(retrieved, noun1, noun2))
+        apk_ = apk(ground_truth, retrieved)  #, k=len(qa.db[query]))
+        apks.append(apk_)
 
-            if np.isnan(average_precision):
-                avg_precision.append(0.0)
-            else:
-                avg_precision.append(average_precision)
+        retrieved_by_query[query] = retrieved
 
-            queries_by_obj.setdefault(noun1, []).append(average_precision)
-            queries_by_obj.setdefault(noun2, []).append(average_precision)
-            queries_by_prep.setdefault(preposition, []).append(average_precision)
-            # queries_by_obj[noun1] += average_precision
-            # queries_by_obj[noun2] += average_precision
-            # queries_by_prep[preposition] += average_precision
+        n1, p, n2 = query.split('-')
+        p = p.replace('_', ' ')
+        sc = "{:.2f}".format(apk_).replace('.', ',')
+        print("\\textit{{{} {} {}}} & {} & {} & {} \\\\".format(n1, p, n2, len(retrieved), len(qa.db[query]), sc))
 
-            apk_ = apk(qa.db[query], retrieved, k=len(qa.db[query]))
-            apks.append(apk_)
-            precision_[nn], recall_[nn], _ = precision_recall_curve(y_test, y_scores)
-            count += 1
-
-            # print("query {} returned {} images, ground-truth has {}. Score {:.4f}".format(query, len(retrieved),
-            #                                                                               len(qa.db[query]),
-            #                                                                               average_precision))
-            print("query {} returned {} images, ground-truth has {}. Score {:.2f}".format(query, len(retrieved),
-                                                                                          len(qa.db[query]),
-                                                                                          apk_))
-            mean_average_precision.setdefault(query, []).append({'tp': tp, 'fp': fp, 'tn': tn, 'fn': fn,
-                                                                 'y_test': y_test.tolist(),
-                                                                 'y_scores': y_scores.tolist()})
-            yy_true.append(y_test)
-            yy_pred.append(y_scores)
-
-            bar.update(1)
+        # bar.update(1)
 
     print("{} queries".format(count))
-    print('label ranking average precision {}'.format(label_ranking_average_precision_score(yy_true, yy_pred)))
-    yy_true = np.array(yy_true)
-    yy_pred = np.array(yy_pred)
-
-    print("APK {:.2f}".format(np.mean(apks)))
-
-    y1 = yy_true.flatten()
-    y2 = yy_pred.flatten()
-    micro = average_precision_score(y1, y2)
-
-    # Plot Precision-Recall curve for each class
-    precision_micro, recall_micro, _ = precision_recall_curve(y1, y2)
-
-    print('Precision score {}'.format(micro))
-    with open(params.output_file, 'w') as fp:
-        json.dump(mean_average_precision, fp)
-
-    print("mAP {:.4f}".format(np.mean(avg_precision)))
-
-    with open("queries_by_element.json", 'w') as fp:
-        json.dump({"prepositions": queries_by_prep, "objects": queries_by_obj}, fp)
+    print("mAP {:.4f}".format(np.mean(apks)))

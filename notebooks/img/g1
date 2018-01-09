@@ -1,0 +1,98 @@
+graph {
+	fence
+	sign
+	airplane
+	balcony
+	van
+	sky
+	bench
+	streetlight
+	gate
+	water
+	path
+	building
+	car
+	tree
+	rock
+	grass
+	road
+	fence -- sign
+	fence -- van
+	fence -- sky
+	fence -- streetlight
+	fence -- path
+	fence -- building
+	fence -- car
+	fence -- tree
+	fence -- grass
+	fence -- road
+	sign -- van
+	sign -- sky
+	sign -- streetlight
+	sign -- building
+	sign -- car
+	sign -- tree
+	sign -- grass
+	sign -- road
+	airplane -- sky
+	airplane -- building
+	airplane -- car
+	airplane -- tree
+	airplane -- road
+	balcony -- sky
+	balcony -- streetlight
+	balcony -- building
+	balcony -- car
+	balcony -- tree
+	balcony -- road
+	van -- sky
+	van -- streetlight
+	van -- building
+	van -- car
+	van -- tree
+	van -- grass
+	van -- road
+	sky -- bench
+	sky -- streetlight
+	sky -- gate
+	sky -- water
+	sky -- path
+	sky -- building
+	sky -- car
+	sky -- tree
+	sky -- rock
+	sky -- grass
+	sky -- road
+	bench -- building
+	bench -- car
+	bench -- tree
+	bench -- grass
+	streetlight -- building
+	streetlight -- car
+	streetlight -- tree
+	streetlight -- grass
+	streetlight -- road
+	gate -- building
+	gate -- tree
+	water -- building
+	water -- tree
+	water -- rock
+	water -- grass
+	path -- building
+	path -- car
+	path -- tree
+	path -- grass
+	building -- car
+	building -- tree
+	building -- grass
+	building -- road
+	car -- car
+	car -- tree
+	car -- grass
+	car -- road
+	tree -- rock
+	tree -- grass
+	tree -- road
+	rock -- rock
+	grass -- road
+}

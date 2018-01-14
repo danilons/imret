@@ -46,7 +46,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='IRRCC program')
     parser.add_argument('-d', '--dataset_path', action="store", default='data/datasets')
     parser.add_argument('-i', '--image_path', action="store", default='data/images')
-    parser.add_argument('-f', '--index_file', action="store", default='data/preposition/index.csv')
+    parser.add_argument('-f', '--index_file', action="store", default='data/preposition/index-0.900.csv')
     parser.add_argument('-a', '--annotation', action="store", default='data/query/test_anno')
     parser.add_argument('-o', '--output_file', action="store", default='data/query/map.json')
     parser.add_argument('-q', '--queries_path', action="store", default='data/query/query_equivalence.csv')
@@ -90,11 +90,10 @@ if __name__ == "__main__":
     queries_by_prep = {}
     retrieved_by_query = {}
 
-    import ipdb; ipdb.set_trace()
+    # import ipdb; ipdb.set_trace()
     # with click.progressbar(length=len(query_db), show_pos=True, show_percent=True) as bar:
     for nn, query in enumerate(sorted(query_db)):
         if len(qa.db[query]) == 0:
-            # print("invalid query {}".format(query))
             continue
 
         ground_truth = [im for im in qa.db[query] if im.endswith('.jpg')]
@@ -148,8 +147,8 @@ if __name__ == "__main__":
         n1, p, n2 = query.split('-')
         p = p.replace('_', ' ')
         sc = "{:.2f}".format(apk_).replace('.', ',')
-        print("\\textit{{{} {} {}}} & {} & {} & {} \\\\".format(n1, p, n2, len(retrieved), len(qa.db[query]), sc))
-
+        # print("\\textit{{{} {} {}}} & {} & {} & {} \\\\".format(n1, p, n2, len(retrieved), len(qa.db[query]), sc))
+        print("\\textit{{{} {} {}}} & {} & {} & {} & {} & {} & {} & {} \\\\".format(n1, p, n2, len(retrieved), len(qa.db[query]), sc, tp, fp, tn, fn))
         # bar.update(1)
 
     print("{} queries".format(count))
